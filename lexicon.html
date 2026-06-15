@@ -396,6 +396,42 @@
   }
   .answer-reveal:hover { color: var(--text); }
 
+  /* ── TIMER ── */
+  #timer-display {
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    min-width: 68px;
+    text-align: center;
+    transition: color 0.3s, border-color 0.3s;
+  }
+  #timer-display.warning { color: var(--yellow); border-color: var(--yellow-dim); }
+  #timer-display.danger  { color: var(--danger); border-color: var(--danger); animation: pulse 0.6s ease infinite alternate; }
+  @keyframes pulse { from { opacity:1; } to { opacity:0.45; } }
+  #timer-display.hidden  { display: none; }
+
+  /* ── REVEAL ANSWERS BUTTON ── */
+  #reveal-answers-btn {
+    padding: 5px 12px;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  #reveal-answers-btn:hover { border-color: var(--danger); color: var(--danger); }
+  #reveal-answers-btn.hidden { display: none; }
+
   /* ── SCROLLBAR ── */
   #game-area::-webkit-scrollbar { width: 6px; }
   #game-area::-webkit-scrollbar-track { background: transparent; }
@@ -447,6 +483,16 @@
       <option value="hard">Hard</option>
     </select>
 
+    <span class="ctrl-label">Timer</span>
+    <select id="timer-sel">
+      <option value="0" selected>Off</option>
+      <option value="120">2 min</option>
+      <option value="180">3 min</option>
+      <option value="300">5 min</option>
+      <option value="600">10 min</option>
+      <option value="custom">Custom…</option>
+    </select>
+
     <button id="new-game-btn" onclick="requestNewGame()">New Game</button>
   </div>
 </div>
@@ -459,6 +505,8 @@
   <span>·</span>
   <span>Attempts: <span id="sb-tries">0</span>/<span id="sb-max">6</span></span>
   <div id="status-msg"></div>
+  <div id="timer-display" class="hidden">⏱ --:--</div>
+  <button id="reveal-answers-btn" class="hidden" onclick="requestRevealAnswers()">Reveal Answers</button>
 </div>
 
 <!-- MAIN APP -->
@@ -494,14 +542,31 @@
 <!-- VALIDATING INDICATOR -->
 <div id="validating-indicator">Checking word…</div>
 
-<!-- CONFIRM MODAL (leave game warning) -->
+<!-- CONFIRM MODAL -->
 <div id="modal-overlay">
   <div id="modal-box">
-    <h3>⚠️ Give up current game?</h3>
+    <h3 id="modal-title">⚠️ Give up current game?</h3>
     <p id="modal-text">You have a game in progress. Switching modes will end it and reveal the answer(s). Continue?</p>
     <div class="modal-btns">
       <button id="modal-cancel"  onclick="closeModal()">Keep Playing</button>
-      <button id="modal-confirm" onclick="confirmLeave()">Give Up &amp; Leave</button>
+      <button id="modal-confirm" onclick="modalConfirmAction()">Give Up &amp; Leave</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM TIMER MODAL -->
+<div id="custom-timer-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:999;align-items:center;justify-content:center;">
+  <div id="modal-box" style="max-width:300px;">
+    <h3 style="font-size:1rem;font-weight:700;color:var(--text);text-align:center;">Custom Timer</h3>
+    <p style="font-size:0.82rem;color:var(--text-dim);text-align:center;margin-top:6px;">Enter duration in minutes (1–99)</p>
+    <input id="custom-timer-input" type="number" min="1" max="99" value="5"
+      style="width:100%;margin-top:12px;background:var(--surface2);color:var(--text);border:1.5px solid var(--border);
+             border-radius:8px;padding:10px;font-size:1rem;text-align:center;outline:none;" />
+    <div class="modal-btns" style="margin-top:14px;">
+      <button onclick="cancelCustomTimer()" style="padding:9px 22px;border-radius:20px;border:1.5px solid var(--border);
+              font-size:0.85rem;font-weight:700;cursor:pointer;background:transparent;color:var(--text-dim);">Cancel</button>
+      <button onclick="applyCustomTimer()" style="padding:9px 22px;border-radius:20px;border:1.5px solid var(--accent);
+              font-size:0.85rem;font-weight:700;cursor:pointer;background:var(--accent-dim);color:#fff;">Set Timer</button>
     </div>
   </div>
 </div>
@@ -566,9 +631,15 @@ let validWordCache = new Set(); // cache validated words
 
 // Modal pending action
 let pendingModeSwitch = null;
+let modalConfirmFn = null;   // generic confirm callback
 
 // Track if game has started (at least one guess submitted)
 let gameStarted = false;
+
+// Timer state
+let timerInterval = null;
+let timerSeconds  = 0;   // countdown seconds (0 = disabled)
+let timerLeft     = 0;   // seconds remaining
 
 // ═══════════════════════════════════════════════════
 //  UTILITY
@@ -716,10 +787,8 @@ function applyDifficultyFallback(len, diff) {
 // ═══════════════════════════════════════════════════
 function requestSwitchMode(mode) {
   if (mode === MODE) return;
-  // Warn if a game is in progress
   if (gameStarted && !gameOver && MODE !== 'explorer') {
-    pendingModeSwitch = mode;
-    openModal();
+    openLeaveModal(() => switchMode(mode));
   } else {
     switchMode(mode);
   }
@@ -727,37 +796,44 @@ function requestSwitchMode(mode) {
 
 function requestNewGame() {
   if (gameStarted && !gameOver) {
-    pendingModeSwitch = '__newgame__';
-    document.getElementById('modal-text').textContent =
-      'You have a game in progress. Starting a new game will end it and reveal the answer(s). Continue?';
-    openModal();
+    openLeaveModal(() => initGame(),
+      'You have a game in progress. Starting a new game will end it and reveal the answer(s). Continue?');
   } else {
     initGame();
   }
 }
 
-function openModal() {
-  document.getElementById('modal-text').textContent =
-    'You have a game in progress. Switching will end it and reveal the answer(s). Continue?';
+// ── Generic modal ──
+function openModal(title, text, confirmLabel, onConfirm) {
+  document.getElementById('modal-title').textContent   = title;
+  document.getElementById('modal-text').textContent    = text;
+  document.getElementById('modal-confirm').textContent = confirmLabel;
+  modalConfirmFn = onConfirm;
   document.getElementById('modal-overlay').classList.add('show');
 }
 
 function closeModal() {
-  // Only hides the modal — does NOT clear pendingModeSwitch
   document.getElementById('modal-overlay').classList.remove('show');
+  modalConfirmFn = null;
 }
 
-function confirmLeave() {
-  // Capture before clearing so the action is not lost
-  const pending = pendingModeSwitch;
-  pendingModeSwitch = null;
-  document.getElementById('modal-overlay').classList.remove('show');
-  if (pending === '__newgame__') {
-    initGame();
-  } else if (pending) {
-    switchMode(pending);
-  }
+function modalConfirmAction() {
+  const fn = modalConfirmFn;
+  closeModal();
+  if (fn) fn();
 }
+
+// ── Leave-game helpers ──
+function openLeaveModal(onConfirm, customText) {
+  openModal(
+    '⚠️ Give up current game?',
+    customText || 'You have a game in progress. This will end it and reveal the answer(s). Continue?',
+    'Give Up & Leave',
+    onConfirm
+  );
+}
+
+function confirmLeave() { /* kept for backward compat */ modalConfirmAction(); }
 
 function switchMode(mode) {
   MODE = mode;
@@ -785,19 +861,44 @@ function switchMode(mode) {
 //  SETTINGS CHANGE
 // ═══════════════════════════════════════════════════
 function onSettingChange() {
-  WORD_LEN = parseInt(document.getElementById('len-sel').value);
-  MAX_TRIES = parseInt(document.getElementById('tries-sel').value);
-  DIFFICULTY = document.getElementById('diff-sel').value;
-  if (MODE !== 'explorer') initGame();
+  // Timer select has special handling
+  const timerSel = document.getElementById('timer-sel');
+  if (timerSel.value === 'custom') {
+    showCustomTimerModal();
+    return;
+  }
+
+  if (gameStarted && !gameOver && MODE !== 'explorer') {
+    // Snapshot new values BEFORE the modal, but only apply on confirm
+    const newLen   = parseInt(document.getElementById('len-sel').value);
+    const newTries = parseInt(document.getElementById('tries-sel').value);
+    const newDiff  = document.getElementById('diff-sel').value;
+    const newTimer = parseInt(timerSel.value) || 0;
+    openLeaveModal(() => {
+      WORD_LEN   = newLen;
+      MAX_TRIES  = newTries;
+      DIFFICULTY = newDiff;
+      timerSeconds = newTimer;
+      initGame();
+    }, 'Changing settings will reset your current game and reveal the answer(s). Continue?');
+  } else {
+    WORD_LEN   = parseInt(document.getElementById('len-sel').value);
+    MAX_TRIES  = parseInt(document.getElementById('tries-sel').value);
+    DIFFICULTY = document.getElementById('diff-sel').value;
+    timerSeconds = parseInt(timerSel.value) || 0;
+    if (MODE !== 'explorer') initGame();
+  }
 }
 
 // ═══════════════════════════════════════════════════
 //  INIT GAME
 // ═══════════════════════════════════════════════════
 async function initGame() {
-  WORD_LEN = parseInt(document.getElementById('len-sel').value);
-  MAX_TRIES = parseInt(document.getElementById('tries-sel').value);
+  WORD_LEN   = parseInt(document.getElementById('len-sel').value);
+  MAX_TRIES  = parseInt(document.getElementById('tries-sel').value);
   DIFFICULTY = document.getElementById('diff-sel').value;
+  const timerVal = document.getElementById('timer-sel').value;
+  if (timerVal !== 'custom') timerSeconds = parseInt(timerVal) || 0;
   BOARD_COUNT = MODE === 'hexordle' ? 6 : 4;
 
   setStatus('Loading…');
@@ -807,6 +908,8 @@ async function initGame() {
   currentRow = 0; currentCol = 0; currentGuess = [];
   gameOver = false; inputLocked = false; gameStarted = false;
   qDone = Array(BOARD_COUNT).fill(false);
+
+  stopTimer();
 
   // Pick unique solutions for multi-board modes
   qSolutions = uniqueWords(wordPool, BOARD_COUNT);
@@ -821,6 +924,14 @@ async function initGame() {
   buildKeyboard();
   updateStatusBar();
   setStatus('');
+
+  // Show reveal button only during active game
+  updateRevealButton();
+
+  // Start timer if configured
+  if (timerSeconds > 0 && MODE !== 'explorer') {
+    startTimer(timerSeconds);
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1010,6 +1121,8 @@ function processWordleGuess(guess) {
     if (result.every(s => s === 'correct')) {
       gameOver = true;
       inputLocked = false;
+      stopTimer();
+      updateRevealButton();
       setStatus('🎉 Brilliant!', 'win');
       showToast('You got it!');
       addRevealLink(solution);
@@ -1017,6 +1130,8 @@ function processWordleGuess(guess) {
       currentRow++;
       if (currentRow >= MAX_TRIES) {
         gameOver = true;
+        stopTimer();
+        updateRevealButton();
         setStatus(`Answer: ${solution.toUpperCase()}`, 'lose');
         addRevealLink(solution);
       }
@@ -1057,10 +1172,14 @@ function checkMultiBoardEnd() {
 
   if (allDone) {
     gameOver = true;
+    stopTimer();
+    updateRevealButton();
     const label = MODE === 'hexordle' ? 'Hexordle Champion' : 'Quordle Champion';
     setStatus(`🎉 ${label}!`, 'win');
   } else if (outOfTries) {
     gameOver = true;
+    stopTimer();
+    updateRevealButton();
     for (let b = 0; b < BOARD_COUNT; b++) {
       if (!qDone[b]) showBoardOverlay(b, false, qSolutions[b]);
     }
@@ -1214,6 +1333,134 @@ async function explorerSearch() {
 document.getElementById('exp-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') explorerSearch();
 });
+
+// ═══════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════
+function startTimer(seconds) {
+  timerLeft = seconds;
+  const display = document.getElementById('timer-display');
+  display.classList.remove('hidden', 'warning', 'danger');
+  renderTimer();
+
+  timerInterval = setInterval(() => {
+    timerLeft--;
+    renderTimer();
+
+    if (timerLeft <= 30 && timerLeft > 10) {
+      display.className = 'warning';
+    } else if (timerLeft <= 10) {
+      display.className = 'danger';
+    }
+
+    if (timerLeft <= 0) {
+      stopTimer();
+      if (!gameOver) {
+        gameOver = true;
+        inputLocked = true;
+        setStatus("⏰ Time's up!", 'lose');
+        showToast("Time's up!", 2500);
+        // Reveal all answers
+        revealAllAnswers(false);
+      }
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  const display = document.getElementById('timer-display');
+  if (timerSeconds === 0) {
+    display.classList.add('hidden');
+  } else {
+    display.className = '';
+    renderTimer();
+  }
+}
+
+function renderTimer() {
+  const m = Math.floor(Math.max(timerLeft, 0) / 60).toString().padStart(2, '0');
+  const s = (Math.max(timerLeft, 0) % 60).toString().padStart(2, '0');
+  document.getElementById('timer-display').textContent = `⏱ ${m}:${s}`;
+}
+
+// ═══════════════════════════════════════════════════
+//  CUSTOM TIMER MODAL
+// ═══════════════════════════════════════════════════
+function showCustomTimerModal() {
+  document.getElementById('custom-timer-overlay').style.display = 'flex';
+  document.getElementById('custom-timer-input').focus();
+}
+
+function cancelCustomTimer() {
+  document.getElementById('custom-timer-overlay').style.display = 'none';
+  // Reset select back to previous value
+  const sel = document.getElementById('timer-sel');
+  sel.value = timerSeconds > 0 ? String(timerSeconds) : '0';
+  if (!['0','120','180','300','600'].includes(sel.value)) sel.value = '0';
+}
+
+function applyCustomTimer() {
+  const mins = parseInt(document.getElementById('custom-timer-input').value) || 5;
+  const secs = Math.max(1, Math.min(99, mins)) * 60;
+  document.getElementById('custom-timer-overlay').style.display = 'none';
+
+  if (gameStarted && !gameOver && MODE !== 'explorer') {
+    openLeaveModal(() => {
+      timerSeconds = secs;
+      initGame();
+    }, 'Applying a new timer will reset your current game. Continue?');
+  } else {
+    timerSeconds = secs;
+    if (MODE !== 'explorer') initGame();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  REVEAL ANSWERS
+// ═══════════════════════════════════════════════════
+function updateRevealButton() {
+  const btn = document.getElementById('reveal-answers-btn');
+  if (MODE === 'explorer' || gameOver) {
+    btn.classList.add('hidden');
+  } else {
+    btn.classList.remove('hidden');
+  }
+}
+
+function requestRevealAnswers() {
+  if (gameOver) return;
+  openModal(
+    '🔍 Reveal answers?',
+    'This will immediately end the game and show you all the answers. Are you sure?',
+    'Yes, Reveal',
+    () => {
+      gameOver = true;
+      stopTimer();
+      inputLocked = true;
+      setStatus('Answers revealed.', 'lose');
+      revealAllAnswers(true);
+      updateRevealButton();
+    }
+  );
+}
+
+function revealAllAnswers(voluntary) {
+  if (MODE === 'wordle') {
+    addRevealLink(solution);
+    if (!voluntary) showToast(`The word was: ${solution.toUpperCase()}`, 3000);
+  } else {
+    for (let b = 0; b < BOARD_COUNT; b++) {
+      if (!qDone[b]) showBoardOverlay(b, false, qSolutions[b]);
+    }
+    if (!voluntary) {
+      const answers = qSolutions.filter((_, i) => !qDone[i]).map(w => w.toUpperCase()).join(', ');
+      showToast(`Missed: ${answers}`, 3500);
+    }
+  }
+  updateRevealButton();
+}
 
 // ═══════════════════════════════════════════════════
 //  BOOT
