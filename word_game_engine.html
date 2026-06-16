@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lexicon &#8212; Word &amp; Number Game Engine</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lexicon — Word &amp; Number Game Engine</title>
+<style>
+  :root {
+    --bg:#0f0f13;--surface:#1a1a22;--surface2:#22222e;--border:#2e2e3e;
+    --text:#e8e8f0;--text-muted:#6b6b88;--text-dim:#9494b0;
+    --green:#4ade80;--green-dim:#166534;--yellow:#facc15;--yellow-dim:#713f12;
+    --gray:#3f3f52;--accent:#818cf8;--accent-dim:#3730a3;--danger:#f87171;
+    --tile-gap:5px;--radius:8px;
+  }
+  .light-mode {
+    --bg:#f5f5f0;--surface:#fff;--surface2:#ebebeb;--border:#d0d0cc;
+    --text:#1a1a22;--text-muted:#888880;--text-dim:#555550;
+    --green-dim:#bbf7d0;--yellow-dim:#fef9c3;--gray:#d4d4cc;--accent-dim:#c7d2fe;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;
+       height:100vh;overflow:hidden;display:flex;flex-direction:column;transition:background .2s,color .2s;}
+
+  /* TOP BAR */
+  #topbar{display:flex;align-items:center;gap:7px;padding:8px 12px;background:var(--surface);
+          border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap;}
+  #logo{font-size:1.1rem;font-weight:800;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-right:3px;}
+  .mode-btn{padding:5px 11px;border-radius:20px;border:1.5px solid var(--border);background:transparent;
+            color:var(--text-dim);cursor:pointer;font-size:.78rem;font-weight:600;transition:all .15s;}
+  .mode-btn:hover{border-color:var(--accent);color:var(--text);}
+  .mode-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--text);}
+  .ctrl-group{display:flex;align-items:center;gap:5px;margin-left:auto;flex-wrap:wrap;}
+  .ctrl-label{font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;}
+  select{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);
+         border-radius:var(--radius);padding:4px 6px;font-size:.76rem;cursor:pointer;outline:none;}
+  select:focus{border-color:var(--accent);}
+  .icon-btn{width:29px;height:29px;border-radius:50%;border:1.5px solid var(--border);background:transparent;
+            color:var(--text-dim);cursor:pointer;font-size:.88rem;display:flex;align-items:center;
+            justify-content:center;transition:all .15s;flex-shrink:0;}
+  .icon-btn:hover{border-color:var(--accent);color:var(--accent);}
+  #new-game-btn{padding:5px 13px;background:var(--accent-dim);border:1.5px solid var(--accent);
+                color:var(--text);border-radius:20px;cursor:pointer;font-size:.78rem;font-weight:700;transition:all .15s;}
+  #new-game-btn:hover{background:var(--accent);color:#fff;}
+
+  /* STATUS BAR */
+  #status-bar{padding:5px 12px;font-size:.74rem;color:var(--text-muted);background:var(--bg);
+              border-bottom:1px solid var(--border);display:flex;gap:9px;align-items:center;flex-shrink:0;flex-wrap:wrap;}
+  #status-bar span{color:var(--text-dim);}
+  #status-msg{font-weight:600;}
+  #status-msg.win{color:var(--green);}  #status-msg.lose{color:var(--danger);}
+  #status-right{margin-left:auto;display:flex;gap:7px;align-items:center;}
+
+  /* TIMER */
+  #timer-display{font-size:.74rem;font-weight:700;font-variant-numeric:tabular-nums;
+    letter-spacing:.05em;color:var(--text-dim);background:var(--surface2);border:1.5px solid var(--border);
+    border-radius:20px;padding:3px 10px;min-width:62px;text-align:center;transition:color .3s,border-color .3s;}
+  #timer-display.warning{color:var(--yellow);border-color:var(--yellow-dim);}
+  #timer-display.danger{color:var(--danger);border-color:var(--danger);animation:pulse .6s ease infinite alternate;}
+  #timer-display.hidden{display:none;}
+  @keyframes pulse{from{opacity:1}to{opacity:.4}}
+
+  /* REVEAL BTN */
+  #reveal-answers-btn{padding:3px 10px;background:transparent;border:1.5px solid var(--border);
+    color:var(--text-muted);border-radius:20px;cursor:pointer;font-size:.71rem;font-weight:600;
+    transition:all .15s;white-space:nowrap;}
+  #reveal-answers-btn:hover{border-color:var(--danger);color:var(--danger);}
+  #reveal-answers-btn.hidden{display:none;}
+
+  /* APP */
+  #app{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+
+  /* GAME AREA (word modes) */
+  #game-area{flex:1;overflow-y:auto;display:flex;flex-direction:column;
+             align-items:center;padding:12px 8px 8px;gap:13px;}
+  #game-area::-webkit-scrollbar{width:5px;}
+  #game-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+  /* BOARDS */
+  #boards-container{display:flex;gap:15px;justify-content:center;flex-wrap:wrap;flex:0 0 auto;}
+  .board-wrapper{display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;}
+  .board-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);}
+  .board{display:flex;flex-direction:column;gap:var(--tile-gap);}
+  .board-row{display:flex;gap:var(--tile-gap);}
+  .tile{width:52px;height:52px;border:2px solid var(--border);border-radius:6px;display:flex;
+        align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;
+        text-transform:uppercase;color:var(--text);transition:border-color .1s;user-select:none;}
+  .tile.filled{border-color:var(--text-dim);}
+  .tile.flip{animation:flip .5s ease forwards;}
+  .tile[data-state="correct"]{background:var(--green-dim);border-color:var(--green);color:var(--text);}
+  .tile[data-state="present"]{background:var(--yellow-dim);border-color:var(--yellow);color:var(--text);}
+  .tile[data-state="absent"]{background:var(--gray);border-color:var(--gray);color:var(--text-dim);}
+  @keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+  .tile.pop{animation:pop .12s ease;}
+  @keyframes pop{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  .tile.shake{animation:shake .4s ease;}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}
+    40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+  .board.small .tile{width:33px;height:33px;font-size:.85rem;}
+
+  /* BOARD OVERLAY */
+  .board-overlay{position:absolute;inset:0;background:rgba(15,15,19,.88);display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:4px;
+    font-weight:700;font-size:1rem;pointer-events:none;opacity:0;transition:opacity .3s;}
+  .board-overlay.show{opacity:1;pointer-events:auto;}
+  .board-overlay.win{color:var(--green);}  .board-overlay.lose{color:var(--danger);}
+
+  /* WORD KEYBOARD */
+  #keyboard{display:flex;flex-direction:column;gap:6px;align-items:center;flex-shrink:0;padding-bottom:6px;}
+  .kb-row{display:flex;gap:4px;}
+  .kb-key{min-width:34px;height:44px;padding:0 5px;border-radius:6px;border:none;
+          background:var(--surface2);color:var(--text);font-size:.83rem;font-weight:700;
+          text-transform:uppercase;cursor:pointer;transition:background .2s,color .2s;user-select:none;}
+  .kb-key:active{transform:scale(.95);}
+  .kb-key.wide{min-width:54px;font-size:.68rem;}
+  .kb-key[data-state="correct"]{background:var(--green-dim);color:var(--text);}
+  .kb-key[data-state="present"]{background:var(--yellow-dim);color:var(--text);}
+  .kb-key[data-state="absent"]{background:var(--gray);color:var(--text-muted);}
+
+  /* NUMBER KEYBOARD */
+  #num-keyboard{display:flex;flex-direction:column;gap:7px;align-items:center;flex-shrink:0;padding-bottom:6px;}
+  .num-kb-row{display:flex;gap:7px;justify-content:center;}
+  .num-key{width:54px;height:54px;border-radius:8px;border:1.5px solid var(--border);
+           background:var(--surface2);color:var(--text);font-size:1.15rem;font-weight:700;
+           cursor:pointer;transition:background .15s,transform .1s;user-select:none;}
+  .num-key:active{transform:scale(.92);}
+  .num-key.action{font-size:.72rem;background:var(--accent-dim);border-color:var(--accent);min-width:80px;}
+  .num-key.del{font-size:1.1rem;}
+
+  /* INSTRUCTIONS */
+  #instructions,#numble-instructions{font-size:.71rem;color:var(--text-muted);text-align:center;}
+  #instructions strong{color:var(--green);}  #instructions em{color:var(--yellow);font-style:normal;}
+
+  /* TOAST */
+  #toast{position:fixed;top:62px;left:50%;transform:translateX(-50%) translateY(-8px);
+    background:var(--text);color:var(--bg);padding:7px 18px;border-radius:20px;
+    font-size:.83rem;font-weight:700;pointer-events:none;opacity:0;
+    transition:opacity .2s,transform .2s;z-index:900;white-space:nowrap;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* VALIDATING */
+  #validating-indicator{position:fixed;top:62px;left:50%;transform:translateX(-50%);
+    background:var(--surface2);color:var(--text-dim);padding:5px 14px;border-radius:20px;
+    font-size:.77rem;font-weight:600;border:1px solid var(--border);z-index:901;display:none;}
+
+  /* DICT LINK */
+  .answer-reveal{font-size:.75rem;color:var(--text-muted);cursor:pointer;
+    text-decoration:underline dotted;margin-top:2px;}
+  .answer-reveal:hover{color:var(--text);}
+
+  /* NUMBLE AREA */
+  #numble-area{display:none;flex-direction:column;align-items:center;gap:12px;
+               padding:12px 8px 8px;flex:1;overflow-y:auto;}
+  #numble-area::-webkit-scrollbar{width:5px;}
+  #numble-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+  /* EXPLORER */
+  #explorer{display:none;flex-direction:column;align-items:center;padding:20px 14px;
+            gap:13px;max-width:640px;margin:0 auto;width:100%;}
+  #explorer h2{font-size:.95rem;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;}
+  .exp-row{display:flex;gap:7px;width:100%;flex-wrap:wrap;}
+  #exp-input{flex:1;min-width:140px;background:var(--surface2);color:var(--text);
+    border:1.5px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:.86rem;outline:none;}
+  #exp-input:focus{border-color:var(--accent);}
+  #exp-type{background:var(--surface2);color:var(--text);border:1.5px solid var(--border);
+    border-radius:var(--radius);padding:9px;font-size:.8rem;cursor:pointer;outline:none;}
+  #exp-search-btn{padding:9px 15px;background:var(--accent-dim);border:1.5px solid var(--accent);
+    color:var(--text);border-radius:var(--radius);cursor:pointer;font-size:.8rem;font-weight:700;}
+  #exp-search-btn:hover{background:var(--accent);color:#fff;}
+  #exp-results{width:100%;display:flex;flex-wrap:wrap;gap:6px;min-height:36px;}
+  .exp-word{background:var(--surface2);border:1.5px solid var(--border);border-radius:20px;
+    padding:4px 12px;font-size:.78rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.05em;cursor:pointer;transition:all .15s;color:var(--text-dim);}
+  .exp-word:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+  #exp-status{font-size:.76rem;color:var(--text-muted);width:100%;}
+
+  /* NUMBLE STATS */
+  #numble-stats{display:none;flex-direction:column;align-items:center;padding:20px 14px;
+    gap:14px;max-width:480px;margin:0 auto;width:100%;overflow-y:auto;flex:1;}
+  #numble-stats h2{font-size:.95rem;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;}
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;width:100%;}
+  .stat-box{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:11px 7px;text-align:center;}
+  .stat-num{font-size:1.55rem;font-weight:800;color:var(--accent);}
+  .stat-lbl{font-size:.63rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+  .guess-dist{width:100%;}
+  .guess-dist h3{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;}
+  .dist-row{display:flex;align-items:center;gap:7px;margin-bottom:4px;font-size:.78rem;}
+  .dist-num{width:13px;text-align:right;color:var(--text-dim);font-weight:700;}
+  .dist-bar-wrap{flex:1;background:var(--surface2);border-radius:3px;height:17px;overflow:hidden;}
+  .dist-bar{height:100%;background:var(--accent-dim);border-radius:3px;min-width:4px;
+    display:flex;align-items:center;padding:0 5px;font-size:.7rem;font-weight:700;
+    color:var(--text);transition:width .5s;}
+  .dist-bar.current{background:var(--green-dim);}
+
+  /* MODALS */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+           z-index:999;align-items:center;justify-content:center;}
+  .overlay.show{display:flex;}
+  .modal-box{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;
+    padding:24px 28px;max-width:370px;width:92%;display:flex;flex-direction:column;gap:13px;text-align:center;}
+  .modal-box h3{font-size:.98rem;font-weight:700;color:var(--text);}
+  .modal-box p{font-size:.81rem;color:var(--text-dim);line-height:1.55;}
+  .modal-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+  .modal-btns button{padding:8px 19px;border-radius:20px;border:1.5px solid var(--border);
+    font-size:.81rem;font-weight:700;cursor:pointer;transition:all .15s;
+    background:transparent;color:var(--text-dim);}
+  .modal-btns button:hover{border-color:var(--text-dim);color:var(--text);}
+  .btn-danger{background:var(--danger)!important;border-color:var(--danger)!important;color:#fff!important;}
+  .btn-danger:hover{opacity:.85!important;}
+  .btn-accent{background:var(--accent-dim)!important;border-color:var(--accent)!important;color:var(--text)!important;}
+  .btn-accent:hover{background:var(--accent)!important;color:#fff!important;}
+
+  /* HELP MODAL */
+  .help-rule{display:flex;align-items:center;gap:10px;font-size:.8rem;color:var(--text-dim);text-align:left;}
+  .help-swatch{width:27px;height:27px;border-radius:5px;border:2px solid transparent;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.88rem;flex-shrink:0;}
+  .swatch-green{background:var(--green-dim);border-color:var(--green);color:var(--text);}
+  .swatch-yellow{background:var(--yellow-dim);border-color:var(--yellow);color:var(--text);}
+  .swatch-gray{background:var(--gray);border-color:var(--gray);color:var(--text-dim);}
+
+  @media(max-width:600px){
+    .tile{width:40px;height:40px;font-size:1rem;}
+    .board.small .tile{width:25px;height:25px;font-size:.65rem;}
+    .kb-key{min-width:26px;height:40px;font-size:.7rem;}
+    .kb-key.wide{min-width:42px;}
+    .num-key{width:46px;height:46px;font-size:1rem;}
+    .stats-grid{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div id="logo">Lexicon</div>
+  <button class="mode-btn active" data-mode="wordle"   onclick="requestSwitchMode('wordle')">Wordle</button>
+  <button class="mode-btn"        data-mode="quordle"  onclick="requestSwitchMode('quordle')">Quordle</button>
+  <button class="mode-btn"        data-mode="hexordle" onclick="requestSwitchMode('hexordle')">Hexordle</button>
+  <button class="mode-btn"        data-mode="numble"   onclick="requestSwitchMode('numble')">Numble</button>
+  <button class="mode-btn"        data-mode="explorer" onclick="requestSwitchMode('explorer')">Explorer</button>
+  <div class="ctrl-group">
+    <span class="ctrl-label word-ctrl">Length</span>
+    <select id="len-sel" class="word-ctrl" onchange="onSettingChange()">
+      <option value="4">4</option><option value="5" selected>5</option>
+      <option value="6">6</option><option value="7">7</option><option value="8">8</option>
+    </select>
+    <span class="ctrl-label word-ctrl">Tries</span>
+    <select id="tries-sel" class="word-ctrl" onchange="onSettingChange()">
+      <option value="4">4</option><option value="5">5</option><option value="6" selected>6</option>
+      <option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option>
+    </select>
+    <span class="ctrl-label word-ctrl">Difficulty</span>
+    <select id="diff-sel" class="word-ctrl" onchange="onSettingChange()">
+      <option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option>
+    </select>
+    <span class="ctrl-label numble-ctrl" style="display:none">Digits</span>
+    <select id="numble-len-sel" class="numble-ctrl" style="display:none" onchange="onNumbleSettingChange()">
+      <option value="4" selected>4</option><option value="5">5</option><option value="6">6</option>
+    </select>
+    <span class="ctrl-label numble-ctrl" style="display:none">Tries</span>
+    <select id="numble-tries-sel" class="numble-ctrl" style="display:none" onchange="onNumbleSettingChange()">
+      <option value="4">4</option><option value="5">5</option><option value="6" selected>6</option>
+      <option value="7">7</option><option value="8">8</option>
+    </select>
+    <span class="ctrl-label numble-ctrl" style="display:none">Repeats</span>
+    <select id="numble-repeat-sel" class="numble-ctrl" style="display:none" onchange="onNumbleSettingChange()">
+      <option value="yes" selected>Allowed</option><option value="no">No Repeats</option>
+    </select>
+    <span class="ctrl-label">Timer</span>
+    <select id="timer-sel">
+      <option value="0" selected>Off</option><option value="120">2 min</option>
+      <option value="180">3 min</option><option value="300">5 min</option>
+      <option value="600">10 min</option><option value="custom">Custom…</option>
+    </select>
+    <button class="icon-btn" title="Help" onclick="showHelp()">?</button>
+    <button class="icon-btn numble-stat-btn" title="Statistics" onclick="showNumbleStats()" style="display:none">📊</button>
+    <button class="icon-btn" title="Toggle dark/light" onclick="toggleDarkMode()">🌙</button>
+    <button id="new-game-btn" onclick="requestNewGame()">New Game</button>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+  <span>Mode: <span id="sb-mode">Wordle</span></span>
+  <span>·</span>
+  <span id="sb-len-wrap">Length: <span id="sb-len">5</span> ·</span>
+  <span>Attempts: <span id="sb-tries">0</span>/<span id="sb-max">6</span></span>
+  <div id="status-msg"></div>
+  <div id="status-right">
+    <div id="timer-display" class="hidden">&#9201; --:--</div>
+    <button id="reveal-answers-btn" class="hidden" onclick="requestRevealAnswers()">Reveal Answers</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <!-- WORD GAME AREA -->
+  <div id="game-area">
+    <div id="instructions">
+      Guess the hidden word. <strong>Green</strong> = correct position &middot; <em>Yellow</em> = wrong position &middot; Gray = not in word
+    </div>
+    <div id="boards-container"></div>
+    <div id="keyboard"></div>
+  </div>
+
+  <!-- NUMBLE AREA -->
+  <div id="numble-area">
+    <div id="numble-instructions">
+      Guess the hidden number. <strong style="color:var(--green)">Green</strong> = correct position &middot;
+      <em style="color:var(--yellow)">Yellow</em> = wrong position &middot; Gray = not in number
+    </div>
+    <div id="numble-board-container"></div>
+    <div id="num-keyboard"></div>
+  </div>
+
+  <!-- EXPLORER -->
+  <div id="explorer">
+    <h2>Word Explorer</h2>
+    <div class="exp-row">
+      <input id="exp-input" type="text" placeholder="Enter word or pattern (e.g. c??ld)" maxlength="32"/>
+      <select id="exp-type">
+        <option value="sp">Pattern / Spelling</option><option value="ml">Meaning Related</option>
+        <option value="sl">Sounds Like</option><option value="rel_rhy">Rhymes With</option>
+      </select>
+      <button id="exp-search-btn" onclick="explorerSearch()">Search</button>
+    </div>
+    <div id="exp-status">Enter a query above, then click Search.</div>
+    <div id="exp-results"></div>
+  </div>
+
+  <!-- NUMBLE STATS -->
+  <div id="numble-stats">
+    <h2>Numble Statistics</h2>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-num" id="st-played">0</div><div class="stat-lbl">Played</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-win-pct">0%</div><div class="stat-lbl">Win %</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-streak">0</div><div class="stat-lbl">Streak</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-best">0</div><div class="stat-lbl">Best</div></div>
+    </div>
+    <div class="guess-dist">
+      <h3>Guess Distribution</h3>
+      <div id="dist-bars"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-accent" onclick="hideNumbleStats()">Back to Game</button>
+      <button onclick="resetNumbleStats()">Reset Stats</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST / VALIDATING -->
+<div id="toast"></div>
+<div id="validating-indicator">Checking word&#8230;</div>
+
+<!-- CONFIRM MODAL -->
+<div id="modal-overlay" class="overlay">
+  <div class="modal-box">
+    <h3 id="modal-title">Are you sure?</h3>
+    <p id="modal-text"></p>
+    <div class="modal-btns">
+      <button id="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button id="modal-confirm" class="btn-danger" onclick="modalConfirmAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM TIMER MODAL -->
+<div id="custom-timer-overlay" class="overlay">
+  <div class="modal-box">
+    <h3>Custom Timer</h3>
+    <p>Enter duration in minutes (1&#8211;99)</p>
+    <input id="custom-timer-input" type="number" min="1" max="99" value="5"
+      style="width:100%;margin-top:4px;background:var(--surface2);color:var(--text);
+             border:1.5px solid var(--border);border-radius:8px;padding:10px;
+             font-size:1rem;text-align:center;outline:none;"/>
+    <div class="modal-btns">
+      <button onclick="cancelCustomTimer()">Cancel</button>
+      <button class="btn-accent" onclick="applyCustomTimer()">Set Timer</button>
+    </div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div id="help-overlay" class="overlay">
+  <div class="modal-box" style="max-width:420px">
+    <h3 id="help-title">How to Play</h3>
+    <div id="help-content" style="display:flex;flex-direction:column;gap:10px;text-align:left"></div>
+    <div class="modal-btns">
+      <button class="btn-accent" onclick="document.getElementById('help-overlay').classList.remove('show')">Got it!</button>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════
+//  FALLBACK WORD LISTS
+// ═══════════════════════════════════════════════════
+const FALLBACK={
+  4:{
+    easy:["ball","bell","bird","blow","blue","bold","bolt","bond","bone","book","boom","born","buck","bull","burn","cake","call","calm","card","care","cave","chat","chip","clay","club","clue","coal","coat","code","coin","cold","cook","cool","cord","core","cost","crew","crop","cube","cure","curl","cute","dark","dash","data","date","dawn","dead","deal","dear","debt","deck","deep","deer","dent","desk","dial","diet","dire","dirt","dish","disk","dive","dock","done","door","dose","down","draw","drip","drop","drum","duck","dusk","dust","earn","ease","east","edge","edit","epic","even","face","fact","fail","fair","fall","fame","fare","farm","fast","fate","fear","feat","feed","feel","feet","fell","felt","file","fill","film","find","fine","fire","firm","fish","fist","flag","flat","flaw","flip","flow","foam","fold","folk","fond","food","fool","form","fort","four","free","frog","fuel","full","fund","fuse","gain","game","gaze","gear","gift","girl","give","glad","glow","glue","goal","goes","gold","good","gust","hail","hair","half","hall","halt","hand","hang","hard","harm","have","hawk","haze","head","heal","heap","hear","heat","heel","help","here","hero","hide","high","hill","hint","hire","hole","home","hook","hope","horn","hose","host","hour","huge","hull","hunt","husk","inch","iron","jade","jail","join","joke","jump","just","keen","keep","kick","kill","kind","king","knee","knot","know","lack","lake","land","lane","last","late","lawn","lead","leaf","lean","leap","left","life","lift","like","lime","line","link","lion","list","live","load","loan","loft","loss","loud","love","luck","lung","made","mail","main","make","male","many","mark","mast","math","maze","meal","mean","meat","meet","melt","menu","mild","milk","mill","mind","mine","miss","mist","mode","moon","more","most","move","much","must","nail","name","need","nest","news","next","nice","nine","node","norm","nose","note","null","open","oral","over","oven","pace","pack","pail","pair","pale","palm","park","part","path","peak","pear","peel","pest","pick","pile","pill","pine","pipe","plan","play","plot","pole","poll","pond","port","pose","post","pour","prey","pull","pump","pure","push","race","rack","rage","raid","rail","rain","rake","rank","rare","rash","rate","read","real","reef","rent","rest","rice","rich","ride","ring","riot","rise","risk","road","roar","robe","rock","role","roll","roof","root","rope","rose","rule","rust","safe","sage","sail","sake","salt","same","sand","sane","save","seal","seed","seek","seem","self","sell","send","shed","ship","shoe","shop","shot","show","shut","sick","sign","silk","sing","sink","site","size","skin","slam","slim","slip","slow","snap","snow","soak","sock","soil","sold","sole","some","song","sort","soul","spin","spot","stem","step","stir","stop","such","suit","sung","surf","swim","tale","tall","tape","task","team","tear","tell","tend","tent","text","thin","tide","tier","tile","time","tiny","tire","told","toll","tone","took","tool","tour","town","tree","trim","trip","true","tube","tune","twin","type","undo","unit","upon","used","user","vale","vane","veil","vein","very","view","vine","void","vote","wake","walk","wall","wand","ward","warm","warn","wave","weak","weed","well","went","west","wide","wild","will","wind","wine","wing","wire","wise","wish","wolf","wood","word","work","worm","worn","yawn","year","your","zone"],
+    normal:["able","acme","amid","arch","avid","axle","balm","bask","bead","beam","bevy","bide","brim","byte","cane","cask","clam","clan","clap","claw","clog","cork","cove","cozy","cram","damp","darn","daze","defy","deft","demo","deny","dote","dove","drab","drag","dreg","dupe","edgy","emit","envy","ergo","euro","fend","fern","fife","flaw","flax","flex","floe","flog","flop","flue","flux","foil","fray","gale","garb","glib","glop","glug","glum","gnat","goad","gram","grit","hack","hasp","heft","heir","hoax","husk","hymn","idly","inky","itch","jeer","jest","kale","kelp","kern","knob","laden","laud","laze","lewd","lien","limp","lisp","loft","lure","lurk","maze","miff","mime","mire","moan","moat","mock","mope","mote","nape","newt","nook","numb","oast","omen","opal","oust","pall","pang","pant","pave","pawn","peck","plod","ploy","plum","pore","posh","pout","puff","pulp","punt","pyre","rasp","raze","reek","reef","rely","rife","rile","rind","rove","ruff","rung","seep","shun","silt","skew","skid","slab","slew","sloe","slop","slug","slur","snag","snip","snob","snub","soar","spat","spew","spud","stab","stew","stun","sync","tack","tang","taut","teem","thud","thug","tick","tote","tuft","twit","typo","vamp","vaunt","veer","vibe","waif","wasp","wend","whim","wick","wilt","wisp","writ","yore","zeal"],
+    hard:["abed","acne","aeon","agog","aloe","alum","amok","anew","aqua","arid","avow","awl","awry","bane","bard","bare","bark","bawl","bier","bile","blab","bleat","bode","bole","boon","boor","bosh","brae","bray","busk","calve","cant","carve","caw","chafe","chaff","char","chew","chide","cleft","coif","corm","croak","cruse","crypt","culm","curd","dace","dado","daub","daunt","deem","drub","dupe","ewer","fain","fend","feud","fief","fleck","flit","flout","foe","foray","froth","froe","gamin","garb","gaunt","gird","glair","glut","gnar","gorse","groat","guile","hasp","hob","hone","hovel","hurl","ibis","imam","imbue","ire","joust","jowl","jut","kern","knap","knar","lave","laze","leach","lour","lout","lune","lute","mace","maw","meed","mire","mitt","mulch","mull","nave","noel","ogre","pare","pate","pave","pique","plash","plod","pock","pod","prude","pule","quaff","quell","quid","reek","rend","rile","ruse","sack","sard","savor","schwa","serf","shard","shirk","shod","shuck","skein","skulk","slab","snout","snub","spoor","sprig","staid","stave","stew","stoat","suet","sulk","tamp","tare","taupe","teem","thane","thew","tiff","toil","tome","tore","torc","twig","twit","ulna","vane","vault","vaunt","veld","vial","weal","welt","wend","whey","wile","wisp","woad","woe","wont","writ","yawl","yore","zany"]
+  },
+  5:{
+    easy:["about","above","abuse","after","again","along","among","angle","apple","began","being","below","black","blade","blame","bland","blank","blast","blaze","blend","bless","blind","block","blood","bloom","blown","blues","board","bonus","boost","bound","brave","bread","break","breed","brick","bride","brief","bring","brisk","broke","brook","brown","brush","build","built","burst","buyer","cabin","carry","catch","cause","charm","chart","chase","cheap","check","chess","chest","chief","child","chord","civil","claim","class","clean","clear","clerk","click","climb","clock","close","cloud","clubs","coast","could","count","court","cover","crack","craft","crash","crazy","cream","creek","crime","crops","cross","crowd","crown","cruel","crush","cycle","daily","dance","death","delay","depth","devil","digit","dirty","dodge","doing","doubt","dough","draft","drain","drama","drank","drawn","dress","dried","drink","drive","drone","drove","drums","drunk","early","earth","eight","elite","empty","enemy","enjoy","enter","equal","error","essay","event","every","exact","exist","extra","fable","faint","faith","false","fancy","favor","feast","fence","fetch","fever","fewer","fiber","field","fifth","fight","final","first","fixed","flame","flare","flesh","flies","flock","flood","floor","flora","flour","flows","flute","focus","force","forge","forms","forum","found","frame","frank","fraud","fresh","front","froze","funds","funny","gains","games","gauge","ghost","given","glare","glass","globe","gloom","glove","glued","grace","grade","grand","grant","grasp","grass","grave","great","green","grill","grind","groan","group","grove","grown","guard","guess","guest","guide","guilt","happy","harsh","hasty","hatch","heart","heavy","hence","herbs","hills","holes","honor","horse","hotel","house","human","humor","hurry","ideas","image","issue","jewel","juice","knock","known","label","large","later","laugh","layer","learn","leave","legal","lemon","level","light","limit","liver","lodge","logic","loose","lower","lucky","lunar","lying","magic","major","maker","manor","maple","march","match","maybe","mayor","means","media","merge","metal","might","mills","minds","minus","mixed","model","money","month","moral","motor","motto","mount","moved","movie","music","nerve","never","night","noble","noise","north","noted","novel","nurse","oasis","ocean","offer","often","olive","onion","opera","orbit","order","other","outer","ounce","owned","oxide","ozone","paper","parts","party","pasta","patch","pause","peace","pearl","perch","perky","phase","phone","photo","piece","pilot","pitch","pixel","pizza","place","plain","plane","plant","plate","plaza","pluck","point","polar","poles","pound","power","press","price","pride","prime","print","prior","prize","probe","prove","pulse","punch","queen","query","quick","quiet","quirk","quota","quote","radar","radio","ranch","range","ratio","reach","ready","realm","reign","relax","relay","reply","rider","right","river","robot","rocks","rouge","rough","round","route","ruler","rural","salad","scene","score","scout","sedan","serve","seven","shaft","shake","shall","shame","shape","share","sharp","sheer","sheet","shift","shine","shirt","shoot","shore","shout","shown","sight","since","sixth","sized","skill","slack","slate","slave","sleek","sleep","slice","slide","slope","smart","smell","smile","smoke","snake","solid","solve","sorry","south","space","spare","speak","spend","spill","spots","spray","stack","staff","stage","stain","stake","stale","stand","start","state","steam","steel","steep","steer","stern","stick","still","stone","stood","store","storm","story","straw","stray","stuck","study","stump","style","sugar","suite","sunny","super","surge","swear","sweep","sweet","swept","swift","swing","sword","table","taken","taste","teach","tears","teeth","tempo","tense","terms","thick","thing","think","third","those","threw","throw","tiger","tight","title","today","token","tough","tower","toxic","track","trade","trail","train","trash","treat","trend","trial","tribe","trick","tried","troop","truck","trunk","trust","truth","twice","twist","ultra","under","union","unite","until","upper","upset","urban","usage","usual","utter","valid","value","vapor","vault","video","vigor","viral","virus","visit","vital","vivid","vocal","voice","voter","wagon","watch","water","weary","weave","wedge","weird","whale","wheat","where","which","while","white","whole","whose","wider","witch","woman","women","woods","world","worry","worse","worst","worth","would","wrist","wrong","yacht","yearn","young","youth","zebra"],
+    normal:["abbey","abide","abode","abyss","acorn","acute","adage","adept","afoot","agile","alder","alias","allay","allot","aloof","amaze","amble","amend","ample","amuse","annex","annoy","antic","anvil","aorta","aphid","ardor","aroma","arose","artsy","askew","atone","attic","audit","augur","avail","avert","avian","bacon","badge","bagel","basin","baste","batch","bayou","beard","beast","beige","belch","bench","beset","bevel","biome","birch","bison","bland","blare","bliss","bogus","brash","brink","briny","broil","bulge","bully","bushy","butch","cabal","cadet","cairn","canny","caper","caste","cedar","chaff","champ","chant","chasm","chide","chive","chore","cinch","civic","clamp","clang","clank","cling","clink","clout","clunk","codec","comet","comma","corny","covet","craze","creak","crimp","crisp","croak","crone","croon","crumb","crypt","curry","cycad","daisy","dandy","decal","decry","delve","demon","detox","dingo","dirge","ditzy","divot","dizzy","dodgy","dowdy","draft","drape","droop","drub","duchy","dusky","dwarf","dwelt","eager","ebony","edify","eerie","elbow","ember","emend","emote","enact","ensue","equip","erode","etude","evict","exert","exile","expel","extol","exult","faint","fangs","feral","fetid","feign","fiend","finch","fishy","flair","flint","flirt","floss","flout","fluke","foamy","focal","foggy","folly","forge","foyer","frail","freak","frond","froze","fudge","fugue","fuzzy","gavel","gaudy","gaunt","gawky","gecko","genus","giddy","glare","gloat","gloss","glove","gnome","goofy","gouge","gourd","grimy","gripe","groan","groin","grope","gruff","guile","gulch","gusto","harpy","hazel","heady","hefty","heist","herby","hoard","hoary","hovel","husky","hyena","icing","idiom","igloo","impel","inept","ingot","inlay","inset","irony","itchy","jaunt","jazzy","jelly","joker","joist","joust","kitty","knave","kneel","knelt","knoll","kudos","laden","lathe","leapt","leery","lefty","lofty","lucid","lurch","lusty","lymph","lyric","manor","mangy","mauve","mealy","melee","melon","messy","muddy","mulch","musty","myrrh","natty","nervy","nifty","noble","oaken","offal","optic","orate","ovoid","padre","parry","patsy","paved","peeve","perky","pewit","petty","pivot","plait","pleat","plumb","plume","plump","plunk","poach","polka","poppy","porch","pouty","preen","primp","prism","privy","proxy","prude","pudgy","putty","quail","qualm","quash","raspy","ratty","rebut","reedy","repay","repel","rider","riled","rivet","rotund","ruddy","rugby","runic","rupee","scamp","scone","scoop","scram","scrub","scuff","seedy","shady","showy","shrub","skulk","sleek","slew","slick","slosh","sloth","slunk","smack","snafu","snaky","snore","snort","snuck","soapy","spank","spawn","speck","spore","spree","sprig","staid","stark","steed","stomp","stout","strap","stray","strum","stuffy","stung","stunt","suede","sulky","surly","swoop","synod","talon","tangy","tardy","tawny","tepid","terse","thane","throb","throe","thumb","tipsy","titan","toady","topaz","torso","tramp","tromp","trout","trove","trudge","tryst","tuber","tulip","tumor","tunic","twang","tweed","twixt","unfit","unify","urchin","usurp","vapor","vaunt","venom","verge","vicar","vigil","vista","vivid","vogue","vouch","vying","wacky","wager","waken","waxen","whelp","whine","whirl","wight","wizen","wonky","wooly","wrath","yeoman","zappy","zippy"],
+    hard:["abeam","abhor","abjure","acrid","adorn","agave","allay","ambit","amiss","amity","anele","anon","apace","apian","aplomb","argot","aspic","assay","atilt","augment","avow","azoth","baize","balk","baste","belie","benumb","bezel","bight","blench","blight","bothy","brail","bridle","brogan","brume","brunt","caber","calyx","carob","caulk","cavil","cavy","chary","churl","cist","cleft","clove","cozen","cruse","cubit","culpa","curdle","daunt","davy","deign","delve","demur","deter","dilute","dolmen","dross","druse","duple","edile","egret","elan","elide","elver","emend","emmet","endue","envoy","ergot","extol","exude","fallow","favus","feign","fenny","fervid","fettle","filch","fleck","flint","flitch","flout","flyby","foray","fovea","fraught","frond","frore","ganef","gauze","genial","geste","glean","golem","gorget","gouge","grebe","groat","guile","gules","gullet","hafts","haler","halve","hawse","helve","hillock","hoick","hovel","hubris","illume","imbed","impede","inane","inlaid","inlet","inure","islet","jocund","jurat","kilter","knout","kraal","lacuna","lathe","leach","letch","levee","liege","lissom","litmus","livid","lurid","lyric","macle","malic","malkin","manic","mavin","melic","micah","mirage","monad","morel","morion","mucus","mulch","myrrh","natal","naiad","nexus","nonce","numen","oblong","octet","onset","opine","oxter","paduk","pated","pavis","penal","pilaf","pipit","pixie","plash","plinth","plumb","ponce","prolix","psych","purge","quaff","qualm","quaver","rabbet","ramose","recto","reeve","reify","risky","rosin","rowel","ruche","runic","savvy","scald","screed","scrim","sepal","shend","shroud","sidle","sinew","skein","skimp","skirl","snafu","snick","sorel","spall","spean","spelt","sprat","squib","stark","stave","stele","sullen","supine","synod","terce","thane","throb","toper","totem","tuber","tunic","ulcer","uvula","vaunt","venal","verge","virtu","vying","wilty","wizen","yokel"]
+  },
+  6:{
+    easy:["aboard","across","actual","advice","afford","afraid","agency","agreed","almost","amount","animal","anyone","anyway","around","arrive","attack","beauty","before","behind","belong","better","bottom","bridge","bright","broken","bronze","budget","builds","burden","button","camera","castle","causes","chance","change","charge","choice","choose","chosen","circle","client","closed","closer","coffee","column","combat","coming","common","corner","county","couple","course","cousin","credit","crimes","crisis","critic","custom","damage","decide","degree","depend","design","detail","differ","direct","divide","dollar","double","driven","driver","during","easily","effect","eighth","either","eleven","emerge","employ","energy","enough","entire","escape","estate","ethnic","events","except","expand","expert","export","extent","fabric","factor","failed","fairly","fallen","family","famous","faster","female","figure","filter","follow","forest","formal","formed","friend","frozen","future","galaxy","gender","global","ground","growth","happen","hazard","health","height","helped","hidden","higher","highly","hoping","horror","hunter","impact","import","income","indeed","inform","inside","invest","island","itself","junior","keeper","knight","launch","lawyer","leader","league","leaves","length","little","longer","losing","lovers","lowest","mainly","manage","manner","market","matter","member","memory","mental","method","middle","mirror","missed","modern","mostly","motion","motive","moving","murder","mutual","native","nature","nearby","nobody","normal","notion","number","object","office","online","option","orange","origin","others","output","parent","people","person","phrase","planet","please","pocket","police","powder","prefer","pretty","prince","prison","public","purple","pursue","reform","region","remain","remote","repeat","review","ribbon","richer","rising","ruling","salmon","sample","saving","scheme","school","screen","season","series","shower","simple","sister","skills","smooth","social","solved","source","spirit","spoken","spread","square","static","stolen","stress","strict","string","strong","struck","stupid","surely","switch","symbol","taking","talent","target","things","thirty","though","threat","toward","travel","treaty","trying","tunnel","twenty","typing","unable","unique","united","unless","useful","varies","victim","vision","weapon","wealth","weekly","weight","wisdom","wonder","worker","writer"],
+    normal:["ablaze","abound","absent","absurd","accent","accuse","aerial","ageing","allied","analog","anemia","annual","antler","arcane","ardent","ashore","assess","asthma","astute","avatar","avenge","babble","badger","baffle","banter","barely","barter","battle","bewail","bicker","bitter","blanch","bleach","blotch","blower","blurry","boiler","bonnet","bounty","branch","breach","bright","bruise","bucket","buffet","bundle","bungle","burrow","cackle","candle","candid","casket","cinder","cipher","clamor","cobalt","covert","cudgel","curtly","cyclic","dagger","darken","dazzle","defiant","deform","defray","denser","deride","divine","dotted","drivel","earthy","elicit","embark","embody","emerge","empire","errant","erring","extant","fabled","fatigue","feline","feisty","fender","ferret","fester","fickle","flinch","florid","foment","frigid","fringe","fuddle","fumble","furtive","gadget","gallop","gamble","garble","garish","garner","gentry","gilded","gobble","gossip","gotten","gravel","grisly","grovel","grouse","grouch","grumpy","gutter","hapless","hardly","hasty","helmet","herald","heresy","holler","humane","humble","hurtle","hustle","ignite","illicit","illume","imbibe","impede","import","impute","inborn","impure","insane","insult","intent","invade","jitter","jostle","jounce","jumble","kindle","knotted","lament","lather","lavish","lessen","livid","loathe","lonely","mangle","mantle","marrow","marvel","meddle","medium","menace","morose","mortal","muddle","murky","muffle","muster","myrtle","nabbed","narrow","nettle","nuzzle","obtuse","offend","paddle","pander","parody","parrot","peddle","penury","placid","pliant","plunge","ponder","pounce","rabble","radiant","ramble","rancor","ransom","rattle","ravage","ravine","ravish","recoil","resign","riddle","robber","rudely","rugged","rumble","rustle","sallow","savage","scorch","scrawl","seethe","shadow","shrill","shroud","sinful","skinny","slight","sliver","sludge","snarky","snuggle","sordid","strife","squirm","stodgy","stubborn","tangent","tawdry","terror","thrash","thrill","tinker","topple","touchy","trample","trifle","tumble","turmoil","tussle","tyranny","unbind","unfair","unfurl","unique","unrest","unruly","uproot","urgent","vermin","vexing","vilify","virile","viscous","volley","wakeful","wanton","warden","warble","warily","wasted","wayward","whimsy","wholly","wicked","writhe","yarrow","zealot"],
+    hard:["abrade","accrue","adroit","adsorb","alkali","allele","ambush","amebic","amends","anneal","apical","apodal","apogee","aplomb","assail","astral","atrip","avocet","azurite","baldric","bifocal","billow","bilge","binate","bisect","bivalve","blanch","blight","bolster","bovine","brawny","bursar","calico","canard","carbon","casque","catgut","caustic","cermet","chisel","cilia","clique","cobalt","cocoon","coerce","combust","concave","condone","coronal","corsair","craven","cresset","culling","cunning","datum","deadpan","decant","decamp","decorum","deface","defame","defile","demote","dendrite","denote","derive","desert","desist","detain","devolve","direly","dogged","dowse","dolorous","dross","elicit","emetic","effete","efface","emboss","ennui","ensnare","entice","equine","esprit","espy","esteem","evince","exhort","exhale","exile","extant","falcon","fatuous","fester","fetid","flinch","florid","finagle","gallon","gallant","garble","gauche","gemot","gilded","glutton","gnarled","gonzo","gouge","greave","grovel","guile","hadron","halite","hallux","hamper","haptic","harrow","hazmat","helical","heresy","hummus","ignite","illicit","illume","impend","impinge","impute","inure","invoke","joust","jugular","lacuna","lament","lanate","latent","lavish","leaven","libel","lictor","liege","livid","loathe","lobate","lustre","malign","meddle","miasma","micron","morose","mottle","mucosa","mulch","murmur","myrtle","nectar","negate","nimble","obtuse","obdurate","ombre","opaque","orison","ornery","oxter","pallid","pander","pariah","pathos","pectin","pelage","penury","phlegm","pilfer","pliant","plumb","plunge","pluton","pompous","pounce","precept","prowl","putsch","rabble","rakish","rampage","rankle","rapine","raucous","recant","recoil","remand","repine","replete","repose","repute","revile","ribald","rivulet","rondo","russet","rustle","salvo","sallow","scalp","scorch","screed","scuffle","seethe","serene","shrill","shroud","simper","sluice","snarl","solemn","somatic","sordid","sparse","spigot","spinal","squalor","sulfite","sultry","suture","sylvan","talon","tangent","tawdry","tepid","thrash","thrill","totem","topple","toxin","turmoil","tussle","tyrant","ululate","unfurl","unruly","varlet","vellum","vibrato","vilify","virile","vitriol","volley","wakeful","wanton","warden","warily","wastrel","wayward","widgeon","writhe","zealot","zephyr"]
+  },
+  7:{
+    easy:["abandon","account","achieve","acquire","address","advance","against","already","another","anxiety","anybody","anymore","applied","arrange","arrived","article","assault","assumed","attempt","attract","balance","because","becomes","believe","beneath","between","billion","brother","brought","capable","capital","captain","careful","certain","channel","chapter","charges","charity","checked","classic","climate","closely","collect","command","comment","company","compare","complex","concern","conduct","confirm","connect","control","created","crucial","culture","current","dealing","decided","defense","deliver","demands","depends","despite","develop","digital","display","distant","diverse","divided","drawing","eastern","economy","edition","effects","elected","element","emotion","emperor","enabled","endless","engaged","enjoyed","entered","episode","equally","essence","examine","example","exclude","exhibit","explain","express","factors","failure","falling","farmers","fashion","federal","feeling","follows","foreign","forward","freedom","further","general","getting","glimpse","growing","however","hundred","husband","illegal","include","initial","instead","intense","involve","islands","isolate","journey","justice","kitchen","knowing","largely","leaders","leading","learned","leaving","lessons","liberal","linking","logical","looking","machine","mandate","manager","married","maximum","meaning","measure","meeting","message","million","minimum","missing","mission","mistake","mixture","monitor","monthly","motives","natural","neither","network","nothing","noticed","nuclear","numbers","objects","obvious","officer","opinion","outside","overall","perhaps","picture","playing","popular","poverty","prevent","primary","private","problem","process","product","program","protect","provide","publish","purpose","quality","quickly","reality","receive","regular","release","remains","removal","replace","reports","request","require","results","retired","returns","several","silence","similar","sitting","society","someone","somehow","species","stories","subject","success","support","suppose","surface","suspect","talking","teacher","thought","through","tonight","totally","tourism","trained","trouble","typical","usually","various","village","western","whether","without","working","younger"],
+    normal:["abstain","acclaim","agitate","aliment","amalgam","antique","appease","appoint","archaic","archive","arduous","arrears","assuage","astound","augment","avocado","barrier","besiege","bizarre","burnish","cadence","capsule","cascade","caveman","charade","chasten","chronic","citizen","clarity","closure","cognate","cohorts","compost","concord","condone","condemn","confine","conjure","consult","contend","contrite","corrupt","crumble","crusade","crystal","cursory","cynical","deadpan","debacle","decorum","defiant","deflect","demonic","deplete","despair","diction","diffuse","discord","dismiss","diverge","dormant","drought","eclipse","elevate","elusive","emanate","enforce","enshrine","envious","fervent","festoon","fixated","focused","frantic","gallant","garland","gauntlet","gladden","glorify","granted","gratify","gravity","grimace","hapless","headway","hearten","hellish","heretic","hostile","humbling","igneous","illicit","implore","impress","incense","invoke","inertia","inherit","insight","install","isolate","liberal","lineage","loathe","lockout","longing","magnify","mayoral","mediate","menthol","mineral","mixture","notable","obvious","offense","outrage","overcome","pamphlet","paragon","peasant","perjury","permeate","persist","placard","portend","posture","prevail","prolong","prosper","protest","prudent","rebuild","reclaim","recoil","recover","redress","refusal","relapse","relieve","remnant","renounce","replete","repress","resolve","restore","revive","rivalry","ruinous","salvage","satiate","scornful","serene","servant","slander","slumber","strangle","stylish","subvert","succumb","summons","swindle","tangent","tarnish","tempest","torment","torture","trespass","triumph","turmoil","tyranny","unearth","unravel","upheaval","urgency","verbose","vibrant","victory","villain","virulent","vulture","warrior","yearning","zealous"],
+    hard:["abscond","absolve","abstain","acolyte","adamant","adjunct","adverse","alacrity","amalgam","anomaly","appease","apropos","arcane","arduous","atrophy","augment","avarice","aversion","baleful","bedlam","beguile","blandish","blight","brazen","burnish","callous","capricious","carrion","cathartic","caustic","caveat","celerity","chagrin","charlatan","chimera","chicanery","chronic","churlish","circuitous","cogent","collusion","comport","confound","conjure","contrite","convulse","cryptic","culpable","cursory","cynical","debacle","debauch","degenerate","desecrate","despotic","devious","disclaim","discord","dismantle","dissuade","diverge","duplicity","dystopia","effrontery","egregious","embitter","embroil","enmity","endemic","errant","exigent","fastidious","fatuous","flagrant","fervid","forebode","fortitude","frugal","gambit","garish","genial","grimace","grotesque","guarded","guileful","hapless","heretic","hoodwink","hostile","humility","hypocrisy","illicit","impugn","impunity","insidious","inveigle","irate","laconic","languish","lethal","loathe","ludicrous","malcontent","malignant","menacing","mercurial","morbid","mundane","nascent","nefarious","nihilist","noxious","oblique","obsolete","ominous","ostensible","perdition","perilous","permeate","persevere","perverse","petulant","pillage","placate","platitude","poignant","portentous","precarious","pernicious","profligate","prolix","provoke","pugnacious","querulous","rancorous","rapacious","raucous","recalcitrant","reclusive","reprehensible","repudiate","retrograde","ribald","riotous","rampant","ruthless","sanctify","sardonic","scathing","scorched","secretive","sedition","servitude","sinister","skeptical","slander","slovenly","solace","sordid","specious","spurious","squalid","squander","stolid","strenuous","strident","subjugate","subversive","succumb","supine","sycophant","tenacious","torment","treacherous","tumultuous","tyranny","uncanny","unravel","upbraid","usurious","vacuous","vanquish","venomous","verbose","vexing","vitriol","vitriolic","zealous"]
+  },
+  8:{
+    easy:["absolute","abstract","accepted","accident","achieved","acquired","addition","adjusted","affected","agencies","approved","assuming","attached","audience","building","business","campaign","capacity","category","changing","children","combined","complete","consider","consumer","continue","creating","criminal","cultural","customer","daughter","decision","describe","designed","directly","distinct","domestic","dramatic","economic","educated","emerging","evidence","extended","external","familiar","featured","followed","gathered","generated","globally","greatest","happened","identify","improved","included","increase","industry","informed","involved","isolated","language","learning","maintain","majority","material","measures","minority","modified","national","negative","neighbor","numerous","obtained","official","offshore","operated","original","partners","patients","peaceful","physical","platform","position","positive","practice","prepared","presence","priority","problems","produced","progress","provides","publicly","received","recently","required","research","residents","resource","resulted","revealed","reviewed","revision","security","selected","separate","services","situated","southern","students","subjects","suffered","suitable","supplied","supports","targeted","thousand","together","tomorrow","training","transfer","ultimate","valuable","variable","vehicles","violence","visiting","whatever","whenever","wherever","yourself"],
+    normal:["aberrant","abrasion","acclaimed","aesthetic","affluence","alchemist","allegiant","ambiguous","amorphous","analytic","anarchist","antiquated","appendage","apprehend","archetype","arrogance","attrition","augmented","authentic","autonomy","avarice","beguiling","betrayal","blatantly","bountiful","brainwash","breakdown","brevity","brimstone","bristling","brokerage","calamity","capricious","captured","cascade","cathartic","centered","charlatan","chicanery","circulate","claiming","cognizance","collapse","collusion","combustion","competing","complacent","complicit","condemn","confirmed","confiscate","confound","conjecture","conniving","convergent","corroding","covertly","criticism","crossfire","crumbling","culminate","culpable","cunning","cynicism","decrement","dejection","delusional","depravity","desecrate","desertion","despicable","deviance","deviously","dictation","diffusion","discordant","discredit","disengage","disguised","dismantle","disorder","dissident","diversion","doctrinal","dominance","dystopian","egregious","elaborate","empathize","enshrine","epidemic","erroneous","euphemism","evocation","evolving","exaggerate","exasperate","execution","exonerate","facetious","falsehood","fanatical","ferocious","flustered","formulate","fortitude","foreboding","fracturing","fraudulent","frugality","frustration","futuristic","grandiose","grotesque","guiltless","habitual","hierarchy","highlight","hindrance","hostility","hyperbole","hypocrisy","ignorance","immutable","imperfect","implicate","impulsive","incognito","indelible","insolence","intrinsic","invasive","isolating","jealousy","jeopardize","labyrinth","languishing","lethargic","literally","malicious","malignant","manifesto","manipulate","masquerade","mercurial","menacing","mendacious","misguided","monolithic","moralizing","murderous","nefarious","neurotic","notorious","objective","obscuring","obsolete","ominously","oppressive","ostracized","paranoia","paralyzing","pervasive","perverted","polarized","polemical","portraying","precarious","predatory","prophetic","pugnacious","rampaging","rapacious","reductive","reluctance","resentment","retaliate","rethinking","revealing","rigorous","ritualized","shielding","sinister","slaughter","sorrowful","stagnant","stillness","strategic","strengthen","subversive","suffering","supremacy","systemic","tenacious","terrorism","tormented","tyrannous","uprising","vitriol","volatile","wandering","wretched","yearning"],
+    hard:["aberrance","abnegation","abominate","abrasive","absolving","abstruse","acerbic","acquiesce","adamantine","adumbrate","adulterate","aesthetic","agglomerate","alchemical","allegiance","altruistic","amalgamate","ambiguity","ambivalent","ameliorate","analogize","anachronism","anathema","animosity","annihilate","anomalous","antithetical","apostasy","apprehend","archetype","arduous","ascetic","assiduous","atrophied","audacious","avaricious","beguiling","bellicose","besmirch","blatantly","bombastic","braggadocio","calumniate","capricious","captivating","carcinogen","cataclysm","causality","cavalier","cerebral","chimerical","circuitous","circumvent","clairvoyant","coalesce","cognizant","collateral","collusive","combustion","complacent","complicit","conceited","confiscate","conjecture","conniving","convergent","corruption","corrosive","covetous","cronyism","culpability","cynicism","decadence","deceptive","degradation","delusional","depravity","desolation","detestable","deviance","diffidence","disillusion","dissidence","dogmatic","dystopian","effrontery","elaborate","embroiled","empiricism","enshrine","ephemeral","eradicating","escalation","euphemism","exacerbate","exasperate","exonerate","exploitation","extortion","falsehood","fanaticism","ferociously","foreboding","fracturing","frugality","futuristic","grandiosity","grotesque","hierarchy","hyperbole","hypocrisy","ignorance","immutable","impulsive","indelible","insolence","intrinsic","invasive","jeopardize","labyrinth","lethargic","malicious","manifesto","manipulation","mendacious","mercurial","meritocracy","monolithic","moralizing","murderous","nefarious","neurotic","nihilistic","notoriety","objectified","obscuring","oligarchic","ominously","oppressive","ostracized","paranoia","paralyzing","pervasive","perverted","polarized","polemical","precarious","predatory","prophetic","pugnacious","rampaging","rapacious","reductive","reluctance","resentment","retaliate","rethinking","ritualized","shielding","slaughter","strategic","subversive","supremacy","tenacious","terrorism","totalitarian","tyrannous","uprising","vigilance","volatile","wandering","zealotry"]
+  }
+};
+
+// ═══════════════════════════════════════════════════
+//  NUMBLE STATS (localStorage)
+// ═══════════════════════════════════════════════════
+const NUMBLE_STATS_KEY='lexicon_numble_stats';
+const NUMBLE_SAVE_KEY='lexicon_numble_save';
+function loadNumbleStats(){try{return JSON.parse(localStorage.getItem(NUMBLE_STATS_KEY))||defStats();}catch{return defStats();}}
+function saveNumbleStats(s){localStorage.setItem(NUMBLE_STATS_KEY,JSON.stringify(s));}
+function defStats(){return{played:0,won:0,streak:0,best:0,dist:{}};}
+function loadNumbleSave(){try{return JSON.parse(localStorage.getItem(NUMBLE_SAVE_KEY));}catch{return null;}}
+function saveNumbleGame(d){localStorage.setItem(NUMBLE_SAVE_KEY,JSON.stringify(d));}
+function clearNumbleSave(){localStorage.removeItem(NUMBLE_SAVE_KEY);}
+
+// ═══════════════════════════════════════════════════
+//  SHARED STATE
+// ═══════════════════════════════════════════════════
+let MODE='wordle', WORD_LEN=5, MAX_TRIES=6, DIFFICULTY='normal';
+let solution='', currentRow=0, currentCol=0, currentGuess=[], gameOver=false, inputLocked=false, grid=[];
+let BOARD_COUNT=4, qSolutions=[], qGrids=[], qDone=[];
+let wordPool=[], validWordCache=new Set();
+let modalConfirmFn=null, gameStarted=false;
+let timerInterval=null, timerSeconds=0, timerLeft=0, darkMode=true;
+// Numble
+let N_LEN=4, N_TRIES=6, N_REPEATS=true;
+let nSolution='', nRow=0, nCol=0, nGuess=[], nGameOver=false, nInputLocked=false, nGrid=[], nStarted=false;
+
+// ═══════════════════════════════════════════════════
+//  SOUND ENGINE
+// ═══════════════════════════════════════════════════
+let audioCtx=null;
+function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function playTone(freq,type='sine',dur=0.08,vol=0.16){
+  try{const ctx=getAudio(),o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(vol,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    o.start();o.stop(ctx.currentTime+dur);}catch{}
+}
+function sfxType(){playTone(800,'sine',0.05,0.1);}
+function sfxDelete(){playTone(300,'sine',0.05,0.08);}
+function sfxInvalid(){playTone(200,'sawtooth',0.18,0.18);}
+function sfxReveal(n){for(let i=0;i<n;i++)setTimeout(()=>playTone(400+i*80,'sine',0.1,0.14),i*290);}
+function sfxWin(){[520,660,780,1040].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',0.18,0.2),i*120));}
+function sfxLose(){[300,260,220].forEach((f,i)=>setTimeout(()=>playTone(f,'sawtooth',0.2,0.2),i*150));}
+
+// ═══════════════════════════════════════════════════
+//  DARK MODE
+// ═══════════════════════════════════════════════════
+function toggleDarkMode(){
+  darkMode=!darkMode;
+  document.body.classList.toggle('light-mode',!darkMode);
+  document.querySelector('[title="Toggle dark/light"]').textContent=darkMode?'🌙':'☀️';
+}
+
+// ═══════════════════════════════════════════════════
+//  UTILITY
+// ═══════════════════════════════════════════════════
+function rand(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function uniqueWords(pool,count){
+  if(pool.length<count){const e=[];while(e.length<count*2)e.push(...pool);pool=e;}
+  const picked=[],used=new Set();let a=0;
+  while(picked.length<count&&a<1000){const w=rand(pool);if(!used.has(w)){used.add(w);picked.push(w);}a++;}
+  return picked;
+}
+function showToast(msg,dur=1800){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),dur);
+}
+function showValidating(v){document.getElementById('validating-indicator').style.display=v?'block':'none';}
+function setStatus(msg,cls=''){const el=document.getElementById('status-msg');el.textContent=msg;el.className=cls;}
+function updateStatusBar(){
+  const names={wordle:'Wordle',quordle:'Quordle',hexordle:'Hexordle',numble:'Numble',explorer:'Explorer'};
+  document.getElementById('sb-mode').textContent=names[MODE]||MODE;
+  if(MODE==='numble'){
+    document.getElementById('sb-len-wrap').style.display='none';
+    document.getElementById('sb-max').textContent=N_TRIES;
+    document.getElementById('sb-tries').textContent=nRow;
+  }else{
+    document.getElementById('sb-len-wrap').style.display='';
+    document.getElementById('sb-len').textContent=WORD_LEN;
+    document.getElementById('sb-max').textContent=MAX_TRIES;
+    document.getElementById('sb-tries').textContent=
+      (MODE==='wordle')?currentRow:(qDone.length?qDone.filter(Boolean).length+' done':'0');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  WORD VALIDATION
+// ═══════════════════════════════════════════════════
+async function isRealWord(word){
+  const w=word.toLowerCase();
+  if(validWordCache.has(w))return true;
+  for(const buckets of Object.values(FALLBACK))
+    for(const list of Object.values(buckets))
+      if(list.includes(w)){validWordCache.add(w);return true;}
+  try{
+    const res=await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(w)}&md=df&max=20`);
+    const data=await res.json();
+    const match=data.find(d=>d.word.toLowerCase()===w);
+    if(!match)return false;
+    if(match.defs&&match.defs.length>0){validWordCache.add(w);return true;}
+    if(match.score&&match.score>=1000){validWordCache.add(w);return true;}
+    return false;
+  }catch{return true;}
+}
+
+// ═══════════════════════════════════════════════════
+//  WORD FETCHING
+// ═══════════════════════════════════════════════════
+async function fetchWords(len,difficulty){
+  try{
+    const res=await fetch(`https://api.datamuse.com/words?sp=${'?'.repeat(len)}&max=500&md=f`);
+    if(!res.ok)throw new Error();
+    const data=await res.json();
+    const scored=data.filter(w=>w.tags&&w.tags.some(t=>t.startsWith('f:')));
+    if(scored.length>50){
+      const wf=scored.filter(w=>/^[a-z]+$/.test(w.word)&&w.word.length===len)
+        .map(w=>({word:w.word.toLowerCase(),f:parseFloat(w.tags.find(t=>t.startsWith('f:')).slice(2))}))
+        .sort((a,b)=>b.f-a.f);
+      const words=applyDifficultyFilter(wf,difficulty);
+      if(words.length>=20)return words;
+    }
+    const words=data.map(w=>w.word.toLowerCase()).filter(w=>/^[a-z]+$/.test(w)&&w.length===len);
+    if(words.length>=20)return words;
+  }catch{}
+  return applyDifficultyFallback(len,difficulty);
+}
+function applyDifficultyFilter(sorted,diff){
+  const n=sorted.length;
+  let s;
+  if(diff==='easy')s=sorted.slice(0,Math.floor(n*0.4));
+  else if(diff==='hard')s=sorted.slice(Math.floor(n*0.6));
+  else s=sorted.slice(Math.floor(n*0.1),Math.floor(n*0.9));
+  return s.map(w=>w.word);
+}
+function applyDifficultyFallback(len,diff){const b=FALLBACK[len]||FALLBACK[5];return b[diff]||b['normal']||[];}
+
+// ═══════════════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════════════
+function openModal(title,text,confirmLabel,onConfirm){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-text').textContent=text;
+  document.getElementById('modal-confirm').textContent=confirmLabel;
+  modalConfirmFn=onConfirm;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');modalConfirmFn=null;}
+function modalConfirmAction(){const fn=modalConfirmFn;closeModal();if(fn)fn();}
+function openLeaveModal(onConfirm,txt){
+  openModal('⚠️ Give up current game?',
+    txt||'You have a game in progress. This will end it and reveal the answer(s). Continue?',
+    'Give Up & Leave',onConfirm);
+}
+function isInProgress(){
+  if(MODE==='numble')return nStarted&&!nGameOver;
+  return gameStarted&&!gameOver&&MODE!=='explorer';
+}
+
+// ═══════════════════════════════════════════════════
+//  HELP MODAL
+// ═══════════════════════════════════════════════════
+function showHelp(){
+  const isN=MODE==='numble';
+  document.getElementById('help-title').textContent=isN?'How to Play Numble':'How to Play Lexicon';
+  const content=document.getElementById('help-content');content.innerHTML='';
+  const rules=isN?[
+    ['Type a '+N_LEN+'-digit number and press Enter to submit your guess.'],
+    ['Green: digit is correct and in the correct position.','swatch-green','7'],
+    ['Yellow: digit exists in the number but is in the wrong position.','swatch-yellow','3'],
+    ['Gray: digit does not appear in the number at all.','swatch-gray','5'],
+    [N_REPEATS?'Digits may repeat (e.g. 1122 is valid).':'No digit repeats — all digits are unique.'],
+    ['You have '+N_TRIES+' attempts. Stats are tracked across sessions.'],
+  ]:[
+    ['Type a '+WORD_LEN+'-letter word and press Enter to submit.'],
+    ['Green: letter is correct and in the correct position.','swatch-green','A'],
+    ['Yellow: letter exists in the word but in the wrong position.','swatch-yellow','B'],
+    ['Gray: letter does not appear in the word at all.','swatch-gray','C'],
+    ['Words are validated live. Plurals and past tenses are accepted.'],
+    ['In Quordle / Hexordle, every guess applies to all boards at once.'],
+    ['You have '+MAX_TRIES+' attempts. Use the Timer for extra challenge!'],
+  ];
+  rules.forEach(r=>{
+    const row=document.createElement('div');
+    if(r.length===3){
+      row.className='help-rule';
+      row.innerHTML=`<div class="help-swatch ${r[1]}">${r[2]}</div><span>${r[0]}</span>`;
+    }else{
+      row.style.cssText='font-size:.8rem;color:var(--text-dim);';
+      row.textContent='• '+r[0];
+    }
+    content.appendChild(row);
+  });
+  document.getElementById('help-overlay').classList.add('show');
+}
+
+// ═══════════════════════════════════════════════════
+//  MODE SWITCHING
+// ═══════════════════════════════════════════════════
+function requestSwitchMode(mode){
+  if(mode===MODE)return;
+  if(isInProgress())openLeaveModal(()=>switchMode(mode));
+  else switchMode(mode);
+}
+function requestNewGame(){
+  if(isInProgress()){
+    openLeaveModal(()=>{if(MODE==='numble')initNumble();else initGame();},
+      'You have a game in progress. Starting a new game will end it. Continue?');
+  }else{if(MODE==='numble')initNumble();else initGame();}
+}
+function switchMode(mode){
+  stopTimer();MODE=mode;BOARD_COUNT=mode==='hexordle'?6:4;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  document.getElementById('game-area').style.display=(mode==='wordle'||mode==='quordle'||mode==='hexordle')?'flex':'none';
+  document.getElementById('numble-area').style.display=(mode==='numble')?'flex':'none';
+  document.getElementById('explorer').style.display=(mode==='explorer')?'flex':'none';
+  document.getElementById('numble-stats').style.display='none';
+  document.querySelectorAll('.word-ctrl').forEach(el=>el.style.display=(mode==='numble'||mode==='explorer')?'none':'');
+  document.querySelectorAll('.numble-ctrl').forEach(el=>el.style.display=(mode==='numble')?'':'none');
+  document.querySelector('.numble-stat-btn').style.display=(mode==='numble')?'':'none';
+  document.getElementById('sb-len-wrap').style.display=(mode==='numble')?'none':'';
+  if(mode==='numble')initNumble();
+  else if(mode!=='explorer')initGame();
+  updateStatusBar();
+}
+
+// ═══════════════════════════════════════════════════
+//  SETTINGS CHANGE
+// ═══════════════════════════════════════════════════
+function onSettingChange(){
+  const ts=document.getElementById('timer-sel');
+  if(ts.value==='custom'){showCustomTimerModal();return;}
+  if(isInProgress()){
+    const nL=parseInt(document.getElementById('len-sel').value);
+    const nT=parseInt(document.getElementById('tries-sel').value);
+    const nD=document.getElementById('diff-sel').value;
+    const nTi=parseInt(ts.value)||0;
+    openLeaveModal(()=>{WORD_LEN=nL;MAX_TRIES=nT;DIFFICULTY=nD;timerSeconds=nTi;initGame();},'Changing settings will reset your current game. Continue?');
+  }else{
+    WORD_LEN=parseInt(document.getElementById('len-sel').value);
+    MAX_TRIES=parseInt(document.getElementById('tries-sel').value);
+    DIFFICULTY=document.getElementById('diff-sel').value;
+    timerSeconds=parseInt(ts.value)||0;
+    if(MODE!=='explorer')initGame();
+  }
+}
+function onNumbleSettingChange(){
+  const ts=document.getElementById('timer-sel');
+  if(ts.value==='custom'){showCustomTimerModal();return;}
+  if(isInProgress()){
+    const nL=parseInt(document.getElementById('numble-len-sel').value);
+    const nT=parseInt(document.getElementById('numble-tries-sel').value);
+    const nR=document.getElementById('numble-repeat-sel').value==='yes';
+    const nTi=parseInt(ts.value)||0;
+    openLeaveModal(()=>{N_LEN=nL;N_TRIES=nT;N_REPEATS=nR;timerSeconds=nTi;initNumble();},'Changing settings will reset your Numble game. Continue?');
+  }else{
+    N_LEN=parseInt(document.getElementById('numble-len-sel').value);
+    N_TRIES=parseInt(document.getElementById('numble-tries-sel').value);
+    N_REPEATS=document.getElementById('numble-repeat-sel').value==='yes';
+    timerSeconds=parseInt(ts.value)||0;
+    initNumble();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT WORD GAME
+// ═══════════════════════════════════════════════════
+async function initGame(){
+  WORD_LEN=parseInt(document.getElementById('len-sel').value);
+  MAX_TRIES=parseInt(document.getElementById('tries-sel').value);
+  DIFFICULTY=document.getElementById('diff-sel').value;
+  const tv=document.getElementById('timer-sel').value;
+  if(tv!=='custom')timerSeconds=parseInt(tv)||0;
+  BOARD_COUNT=MODE==='hexordle'?6:4;
+  setStatus('Loading...');
+  wordPool=await fetchWords(WORD_LEN,DIFFICULTY);
+  if(!wordPool.length)wordPool=applyDifficultyFallback(WORD_LEN,DIFFICULTY);
+  currentRow=0;currentCol=0;currentGuess=[];gameOver=false;inputLocked=false;gameStarted=false;
+  qDone=Array(BOARD_COUNT).fill(false);
+  stopTimer();
+  qSolutions=uniqueWords(wordPool,BOARD_COUNT);
+  solution=rand(wordPool);
+  const old=document.getElementById('reveal-link');if(old)old.remove();
+  if(MODE==='wordle')generateBoard();else generateMultiBoard();
+  buildKeyboard();updateStatusBar();setStatus('');updateRevealButton();
+  if(timerSeconds>0)startTimer(timerSeconds);
+}
+
+// ═══════════════════════════════════════════════════
+//  BOARD GENERATION
+// ═══════════════════════════════════════════════════
+function generateBoard(){
+  const c=document.getElementById('boards-container');c.innerHTML='';grid=[];
+  const b=document.createElement('div');b.className='board';
+  for(let r=0;r<MAX_TRIES;r++){
+    const row=document.createElement('div');row.className='board-row';grid[r]=[];
+    for(let c2=0;c2<WORD_LEN;c2++){const t=document.createElement('div');t.className='tile';row.appendChild(t);grid[r][c2]=t;}
+    b.appendChild(row);
+  }
+  c.appendChild(b);
+}
+function generateMultiBoard(){
+  const c=document.getElementById('boards-container');c.innerHTML='';qGrids=[];
+  for(let b=0;b<BOARD_COUNT;b++){
+    const wr=document.createElement('div');wr.className='board-wrapper';wr.id=`qboard-wrap-${b}`;
+    const lbl=document.createElement('div');lbl.className='board-label';lbl.textContent=`Board ${b+1}`;wr.appendChild(lbl);
+    const bd=document.createElement('div');bd.className='board small';qGrids[b]=[];
+    for(let r=0;r<MAX_TRIES;r++){
+      const row=document.createElement('div');row.className='board-row';qGrids[b][r]=[];
+      for(let c2=0;c2<WORD_LEN;c2++){const t=document.createElement('div');t.className='tile';row.appendChild(t);qGrids[b][r][c2]=t;}
+      bd.appendChild(row);
+    }
+    wr.appendChild(bd);
+    const ov=document.createElement('div');ov.className='board-overlay';ov.id=`q-overlay-${b}`;wr.appendChild(ov);
+    c.appendChild(wr);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  WORD KEYBOARD
+// ═══════════════════════════════════════════════════
+const KB_ROWS=['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
+function buildKeyboard(){
+  const kb=document.getElementById('keyboard');kb.innerHTML='';
+  KB_ROWS.forEach((row,i)=>{
+    const div=document.createElement('div');div.className='kb-row';
+    if(i===2)div.appendChild(makeKey('Enter','wide',()=>submitGuess()));
+    for(const ch of row)div.appendChild(makeKey(ch,'',()=>typeLetter(ch)));
+    if(i===2)div.appendChild(makeKey('⌫','wide',()=>deleteLetter()));
+    kb.appendChild(div);
+  });
+}
+function makeKey(label,cls,fn){
+  const btn=document.createElement('button');
+  btn.className='kb-key'+(cls?' '+cls:'');btn.textContent=label;
+  if(label.length===1)btn.dataset.key=label;
+  btn.addEventListener('click',fn);return btn;
+}
+function updateKeyboard(letter,state){
+  const priority={correct:3,present:2,absent:1};
+  const key=document.querySelector(`.kb-key[data-key="${letter.toUpperCase()}"]`);
+  if(!key)return;
+  if((priority[state]||0)>(priority[key.dataset.state]||0))key.dataset.state=state;
+}
+
+// ═══════════════════════════════════════════════════
+//  WORD INPUT
+// ═══════════════════════════════════════════════════
+function typeLetter(ch){
+  if(gameOver||inputLocked||MODE==='explorer'||MODE==='numble')return;
+  if(currentCol>=WORD_LEN)return;
+  currentGuess.push(ch.toUpperCase());sfxType();
+  const setTile=(t)=>{t.textContent=ch.toUpperCase();t.classList.add('filled','pop');setTimeout(()=>t.classList.remove('pop'),150);};
+  if(MODE==='wordle')setTile(grid[currentRow][currentCol]);
+  else for(let b=0;b<BOARD_COUNT;b++){if(!qDone[b])setTile(qGrids[b][currentRow][currentCol]);}
+  currentCol++;
+}
+function deleteLetter(){
+  if(gameOver||inputLocked||currentCol===0)return;
+  currentCol--;currentGuess.pop();sfxDelete();
+  const clearTile=(t)=>{t.textContent='';t.classList.remove('filled');};
+  if(MODE==='wordle')clearTile(grid[currentRow][currentCol]);
+  else for(let b=0;b<BOARD_COUNT;b++){if(!qDone[b])clearTile(qGrids[b][currentRow][currentCol]);}
+}
+async function submitGuess(){
+  if(gameOver||inputLocked)return;
+  if(currentCol<WORD_LEN){shakeRow(grid[currentRow]);showToast('Not enough letters');sfxInvalid();return;}
+  const guess=currentGuess.join('').toLowerCase();
+  inputLocked=true;showValidating(true);
+  const valid=await isRealWord(guess);
+  showValidating(false);
+  if(!valid){inputLocked=false;shakeRow(grid[currentRow]);showToast('Not a valid word!');sfxInvalid();return;}
+  gameStarted=true;currentGuess=[];currentCol=0;
+  if(MODE==='wordle')processWordleGuess(guess);else processMultiBoardGuess(guess);
+  updateStatusBar();
+}
+
+// ═══════════════════════════════════════════════════
+//  WORD GUESS PROCESSING
+// ═══════════════════════════════════════════════════
+function checkGuess(guess,sol,len){
+  const result=Array(len).fill('absent'),sArr=sol.split(''),uS=Array(len).fill(false),uG=Array(len).fill(false);
+  for(let i=0;i<len;i++)if(guess[i]===sArr[i]){result[i]='correct';uS[i]=uG[i]=true;}
+  for(let i=0;i<len;i++){if(uG[i])continue;for(let j=0;j<len;j++)if(!uS[j]&&guess[i]===sArr[j]){result[i]='present';uS[j]=true;break;}}
+  return result;
+}
+function revealRow(rowTiles,result,callback){
+  rowTiles.forEach((tile,i)=>{
+    setTimeout(()=>{
+      tile.classList.add('flip');
+      setTimeout(()=>{tile.dataset.state=result[i];},250);
+      setTimeout(()=>{tile.classList.remove('flip');if(i===rowTiles.length-1)setTimeout(callback,60);},500);
+    },i*280);
+  });
+}
+function shakeRow(tiles){
+  if(!tiles)return;
+  (Array.isArray(tiles)?tiles:[...tiles]).forEach(t=>{t.classList.add('shake');t.addEventListener('animationend',()=>t.classList.remove('shake'),{once:true});});
+}
+function processWordleGuess(guess){
+  const result=checkGuess(guess,solution,WORD_LEN);
+  sfxReveal(WORD_LEN);
+  revealRow(grid[currentRow],result,()=>{
+    result.forEach((s,i)=>updateKeyboard(guess[i],s));
+    if(result.every(s=>s==='correct')){
+      gameOver=true;inputLocked=false;stopTimer();updateRevealButton();sfxWin();
+      setStatus('🎉 Brilliant!','win');showToast('You got it!');addRevealLink(solution);
+    }else{
+      currentRow++;
+      if(currentRow>=MAX_TRIES){gameOver=true;stopTimer();updateRevealButton();sfxLose();setStatus(`Answer: ${solution.toUpperCase()}`,'lose');addRevealLink(solution);}
+      inputLocked=false;
+    }
+  });
+}
+function processMultiBoardGuess(guess){
+  let pending=BOARD_COUNT-qDone.filter(Boolean).length;
+  if(pending===0){inputLocked=false;return;}
+  for(let b=0;b<BOARD_COUNT;b++){
+    if(qDone[b])continue;
+    const result=checkGuess(guess,qSolutions[b],WORD_LEN),cb=b;
+    sfxReveal(WORD_LEN);
+    revealRow(qGrids[b][currentRow],result,()=>{
+      result.forEach((s,i)=>updateKeyboard(guess[i],s));
+      if(result.every(s=>s==='correct')){qDone[cb]=true;showBoardOverlay(cb,true,qSolutions[cb]);}
+      pending--;if(pending<=0){currentRow++;checkMultiBoardEnd();}
+    });
+  }
+}
+function checkMultiBoardEnd(){
+  if(qDone.every(Boolean)){
+    gameOver=true;stopTimer();updateRevealButton();sfxWin();
+    setStatus(`🎉 ${MODE==='hexordle'?'Hexordle':'Quordle'} Champion!`,'win');
+  }else if(currentRow>=MAX_TRIES){
+    gameOver=true;stopTimer();updateRevealButton();sfxLose();
+    for(let b=0;b<BOARD_COUNT;b++)if(!qDone[b])showBoardOverlay(b,false,qSolutions[b]);
+    setStatus('Game over.','lose');
+  }
+  inputLocked=false;
+}
+function showBoardOverlay(b,win,word){
+  const ov=document.getElementById(`q-overlay-${b}`);
+  ov.className='board-overlay show '+(win?'win':'lose');
+  ov.innerHTML=win?`✓<br><span style="font-size:.65rem">${word.toUpperCase()}</span>`
+    :`✗<br><span style="font-size:.65rem;cursor:pointer;text-decoration:underline dotted" onclick="openDict('${word}')">${word.toUpperCase()}</span>`;
+}
+function addRevealLink(word){
+  const kb=document.getElementById('keyboard'),old=document.getElementById('reveal-link');
+  if(old)old.remove();
+  const div=document.createElement('div');div.id='reveal-link';div.className='answer-reveal';
+  div.textContent=`Look up "${word.toUpperCase()}" in dictionary →`;div.onclick=()=>openDict(word);
+  kb.parentNode.insertBefore(div,kb);
+}
+function openDict(word){window.open(`https://www.merriam-webster.com/dictionary/${word}`,'_blank');}
+
+// ═══════════════════════════════════════════════════
+//  KEYBOARD EVENTS
+// ═══════════════════════════════════════════════════
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('modal-overlay').classList.contains('show'))return;
+  if(document.getElementById('help-overlay').classList.contains('show'))return;
+  if(MODE==='explorer')return;
+  if(MODE==='numble'){
+    if(e.key==='Enter'){e.preventDefault();nSubmit();return;}
+    if(e.key==='Backspace'){e.preventDefault();nDelete();return;}
+    if(/^[0-9]$/.test(e.key))nType(e.key);
+    return;
+  }
+  if(e.key==='Enter'){e.preventDefault();submitGuess();return;}
+  if(e.key==='Backspace'){e.preventDefault();deleteLetter();return;}
+  if(/^[a-zA-Z]$/.test(e.key))typeLetter(e.key.toUpperCase());
+});
+
+// ═══════════════════════════════════════════════════
+//  EXPLORER
+// ═══════════════════════════════════════════════════
+async function explorerSearch(){
+  const q=document.getElementById('exp-input').value.trim(),type=document.getElementById('exp-type').value;
+  const results=document.getElementById('exp-results'),status=document.getElementById('exp-status');
+  if(!q){showToast('Enter a word or pattern first');return;}
+  status.textContent='Searching...';results.innerHTML='';
+  const map={sp:`sp=${q}`,ml:`ml=${q}`,sl:`sl=${q}`,rel_rhy:`rel_rhy=${q}`};
+  try{
+    const res=await fetch(`https://api.datamuse.com/words?${map[type]}&max=60`);
+    const data=await res.json();
+    if(!data.length){status.textContent='No results found.';return;}
+    status.textContent=`${data.length} result${data.length!==1?'s':''} found. Click a word to look it up.`;
+    data.forEach(item=>{
+      const chip=document.createElement('div');chip.className='exp-word';chip.textContent=item.word;
+      chip.title='Open in Merriam-Webster';chip.onclick=()=>openDict(item.word);results.appendChild(chip);
+    });
+  }catch{status.textContent='Search failed. Check your internet connection.';}
+}
+document.getElementById('exp-input').addEventListener('keydown',e=>{if(e.key==='Enter')explorerSearch();});
+
+// ═══════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════
+function startTimer(seconds){
+  timerLeft=seconds;
+  const d=document.getElementById('timer-display');d.className='';renderTimer();
+  timerInterval=setInterval(()=>{
+    timerLeft--;renderTimer();
+    if(timerLeft<=30&&timerLeft>10)d.className='warning';
+    else if(timerLeft<=10)d.className='danger';
+    if(timerLeft<=0){
+      stopTimer();
+      const over=MODE==='numble'?nGameOver:gameOver;
+      if(!over){
+        sfxLose();setStatus("⏰ Time's up!",'lose');showToast("Time's up!",2500);
+        if(MODE==='numble'){nGameOver=true;nInputLocked=true;nRevealAnswer(false);}
+        else{gameOver=true;inputLocked=true;revealAllAnswers(false);}
+        updateRevealButton();
+      }
+    }
+  },1000);
+}
+function stopTimer(){
+  clearInterval(timerInterval);timerInterval=null;
+  const d=document.getElementById('timer-display');
+  if(timerSeconds===0)d.classList.add('hidden');else{d.className='';renderTimer();}
+}
+function renderTimer(){
+  const m=Math.floor(Math.max(timerLeft,0)/60).toString().padStart(2,'0');
+  const s=(Math.max(timerLeft,0)%60).toString().padStart(2,'0');
+  document.getElementById('timer-display').textContent=`⏱ ${m}:${s}`;
+}
+function showCustomTimerModal(){document.getElementById('custom-timer-overlay').classList.add('show');document.getElementById('custom-timer-input').focus();}
+function cancelCustomTimer(){
+  document.getElementById('custom-timer-overlay').classList.remove('show');
+  const sel=document.getElementById('timer-sel');
+  sel.value=timerSeconds>0?String(timerSeconds):'0';
+  if(!['0','120','180','300','600'].includes(sel.value))sel.value='0';
+}
+function applyCustomTimer(){
+  const mins=parseInt(document.getElementById('custom-timer-input').value)||5;
+  const secs=Math.max(1,Math.min(99,mins))*60;
+  document.getElementById('custom-timer-overlay').classList.remove('show');
+  if(isInProgress()){openLeaveModal(()=>{timerSeconds=secs;if(MODE==='numble')initNumble();else initGame();},'Applying a new timer will reset your current game. Continue?');}
+  else{timerSeconds=secs;if(MODE==='numble')initNumble();else initGame();}
+}
+document.getElementById('timer-sel').addEventListener('change',()=>{if(MODE==='numble')onNumbleSettingChange();else onSettingChange();});
+
+// ═══════════════════════════════════════════════════
+//  REVEAL ANSWERS
+// ═══════════════════════════════════════════════════
+function updateRevealButton(){
+  const btn=document.getElementById('reveal-answers-btn');
+  const over=MODE==='numble'?nGameOver:gameOver;
+  // Show reveal button when game is active OR when time just expired
+  if(MODE==='explorer')btn.classList.add('hidden');
+  else btn.classList.remove('hidden');
+}
+function requestRevealAnswers(){
+  const over=MODE==='numble'?nGameOver:gameOver;
+  if(over){
+    // Time's up case: still allow reveal
+    if(MODE==='numble'){nRevealAnswer(true);}
+    else{revealAllAnswers(true);}
+    document.getElementById('reveal-answers-btn').classList.add('hidden');
+    return;
+  }
+  openModal('🔍 Reveal answers?','This will immediately end the game and show all answers. Are you sure?','Yes, Reveal',
+    ()=>{
+      sfxLose();stopTimer();
+      if(MODE==='numble'){nGameOver=true;nInputLocked=true;setStatus('Answers revealed.','lose');nRevealAnswer(true);}
+      else{gameOver=true;inputLocked=true;setStatus('Answers revealed.','lose');revealAllAnswers(true);}
+      document.getElementById('reveal-answers-btn').classList.add('hidden');
+    });
+}
+function revealAllAnswers(voluntary){
+  if(MODE==='wordle'){addRevealLink(solution);if(!voluntary)showToast(`The word was: ${solution.toUpperCase()}`,3000);}
+  else{
+    for(let b=0;b<BOARD_COUNT;b++)if(!qDone[b])showBoardOverlay(b,false,qSolutions[b]);
+    if(!voluntary){const missed=qSolutions.filter((_,i)=>!qDone[i]).map(w=>w.toUpperCase()).join(', ');showToast(`Missed: ${missed}`,3500);}
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  ██████  NUMBLE  ██████
+// ═══════════════════════════════════════════════════
+function generateNumber(){
+  if(N_REPEATS)return Array.from({length:N_LEN},()=>Math.floor(Math.random()*10)).join('');
+  const d=[0,1,2,3,4,5,6,7,8,9];
+  for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
+  return d.slice(0,N_LEN).join('');
+}
+function initNumble(){
+  N_LEN=parseInt(document.getElementById('numble-len-sel').value);
+  N_TRIES=parseInt(document.getElementById('numble-tries-sel').value);
+  N_REPEATS=document.getElementById('numble-repeat-sel').value==='yes';
+  const tv=document.getElementById('timer-sel').value;if(tv!=='custom')timerSeconds=parseInt(tv)||0;
+  // Restore saved game?
+  const saved=loadNumbleSave();
+  if(saved&&saved.len===N_LEN&&saved.tries===N_TRIES&&saved.repeats===N_REPEATS&&!saved.over){
+    nSolution=saved.solution;nRow=saved.row;nCol=0;nGuess=[];
+    nGameOver=false;nInputLocked=false;nStarted=saved.row>0;
+    buildNumbleBoard();
+    saved.history.forEach((entry,r)=>{
+      entry.guess.split('').forEach((d,c)=>{nGrid[r][c].textContent=d;nGrid[r][c].dataset.state=entry.result[c];});
+    });
+    buildNumKeyboard();updateStatusBar();setStatus('');updateRevealButton();
+    if(timerSeconds>0)startTimer(timerSeconds);return;
+  }
+  nSolution=generateNumber();nRow=0;nCol=0;nGuess=[];nGameOver=false;nInputLocked=false;nStarted=false;
+  clearNumbleSave();stopTimer();buildNumbleBoard();buildNumKeyboard();updateStatusBar();setStatus('');updateRevealButton();
+  if(timerSeconds>0)startTimer(timerSeconds);
+}
+function buildNumbleBoard(){
+  const c=document.getElementById('numble-board-container');c.innerHTML='';nGrid=[];
+  const bd=document.createElement('div');bd.className='board';
+  for(let r=0;r<N_TRIES;r++){
+    const row=document.createElement('div');row.className='board-row';nGrid[r]=[];
+    for(let c2=0;c2<N_LEN;c2++){const t=document.createElement('div');t.className='tile';row.appendChild(t);nGrid[r][c2]=t;}
+    bd.appendChild(row);
+  }
+  c.appendChild(bd);
+}
+function buildNumKeyboard(){
+  const kb=document.getElementById('num-keyboard');kb.innerHTML='';
+  const r1=document.createElement('div');r1.className='num-kb-row';
+  for(let d=1;d<=5;d++)r1.appendChild(makeNumKey(String(d)));
+  kb.appendChild(r1);
+  const r2=document.createElement('div');r2.className='num-kb-row';
+  for(let d=6;d<=9;d++)r2.appendChild(makeNumKey(String(d)));
+  r2.appendChild(makeNumKey('0'));kb.appendChild(r2);
+  const r3=document.createElement('div');r3.className='num-kb-row';
+  const enter=document.createElement('button');enter.className='num-key action';
+  enter.textContent='Enter';enter.style.minWidth='80px';enter.addEventListener('click',nSubmit);r3.appendChild(enter);
+  const del=document.createElement('button');del.className='num-key del';
+  del.textContent='⌫';del.addEventListener('click',nDelete);r3.appendChild(del);
+  kb.appendChild(r3);
+}
+function makeNumKey(digit){
+  const b=document.createElement('button');b.className='num-key';b.textContent=digit;b.dataset.digit=digit;
+  b.addEventListener('click',()=>nType(digit));return b;
+}
+function nType(digit){
+  if(nGameOver||nInputLocked)return;if(nCol>=N_LEN)return;
+  nGuess.push(digit);sfxType();
+  const t=nGrid[nRow][nCol];t.textContent=digit;t.classList.add('filled','pop');
+  setTimeout(()=>t.classList.remove('pop'),150);nCol++;
+}
+function nDelete(){
+  if(nGameOver||nInputLocked||nCol===0)return;
+  nCol--;nGuess.pop();sfxDelete();
+  const t=nGrid[nRow][nCol];t.textContent='';t.classList.remove('filled');
+}
+function nSubmit(){
+  if(nGameOver||nInputLocked)return;
+  if(nCol<N_LEN){shakeRow(nGrid[nRow]);showToast(`Enter all ${N_LEN} digits`);sfxInvalid();return;}
+  const guess=nGuess.join('');nStarted=true;nInputLocked=true;
+  const result=checkGuess(guess,nSolution,N_LEN);
+  sfxReveal(N_LEN);
+  revealRow(nGrid[nRow],result,()=>{
+    const saved=loadNumbleSave()||{solution:nSolution,len:N_LEN,tries:N_TRIES,repeats:N_REPEATS,row:0,over:false,history:[]};
+    saved.history.push({guess,result});saved.row=nRow+1;saveNumbleGame(saved);
+    if(result.every(s=>s==='correct')){
+      nGameOver=true;stopTimer();sfxWin();setStatus('🎉 Correct!','win');showToast('Brilliant!');
+      const st=loadNumbleStats();st.played++;st.won++;st.streak++;st.best=Math.max(st.best,st.streak);
+      st.dist[nRow+1]=(st.dist[nRow+1]||0)+1;saveNumbleStats(st);
+      saved.over=true;saveNumbleGame(saved);nInputLocked=false;updateRevealButton();
+    }else{
+      nRow++;
+      if(nRow>=N_TRIES){
+        nGameOver=true;stopTimer();sfxLose();
+        setStatus(`Answer: ${nSolution}`,'lose');showToast(`The number was ${nSolution}`,3000);
+        const st=loadNumbleStats();st.played++;st.streak=0;saveNumbleStats(st);
+        saved.over=true;saveNumbleGame(saved);nInputLocked=false;updateRevealButton();
+      }else{nInputLocked=false;}
+    }
+    nGuess=[];nCol=0;updateStatusBar();
+  });
+}
+function nRevealAnswer(voluntary){
+  if(!voluntary)showToast(`The number was: ${nSolution}`,3000);
+}
+
+// ═══════════════════════════════════════════════════
+//  NUMBLE STATS UI
+// ═══════════════════════════════════════════════════
+function showNumbleStats(){
+  document.getElementById('game-area').style.display='none';
+  document.getElementById('numble-area').style.display='none';
+  document.getElementById('explorer').style.display='none';
+  document.getElementById('numble-stats').style.display='flex';
+  const st=loadNumbleStats();
+  document.getElementById('st-played').textContent=st.played;
+  document.getElementById('st-win-pct').textContent=st.played?Math.round(st.won/st.played*100)+'%':'0%';
+  document.getElementById('st-streak').textContent=st.streak;
+  document.getElementById('st-best').textContent=st.best;
+  const bars=document.getElementById('dist-bars');bars.innerHTML='';
+  const maxVal=Math.max(1,...Object.values(st.dist));
+  for(let i=1;i<=N_TRIES;i++){
+    const v=st.dist[i]||0;
+    const row=document.createElement('div');row.className='dist-row';
+    const isCurrent=i===(nRow)&&nGameOver;
+    row.innerHTML=`<div class="dist-num">${i}</div>
+      <div class="dist-bar-wrap"><div class="dist-bar${isCurrent?' current':''}" style="width:${Math.max(4,Math.round(v/maxVal*100))}%">${v>0?v:''}</div></div>`;
+    bars.appendChild(row);
+  }
+}
+function hideNumbleStats(){
+  document.getElementById('numble-stats').style.display='none';
+  document.getElementById('numble-area').style.display='flex';
+}
+function resetNumbleStats(){
+  openModal('Reset Statistics?','This will permanently delete all Numble stats. Are you sure?','Reset',()=>{
+    localStorage.removeItem(NUMBLE_STATS_KEY);showNumbleStats();
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════
+initGame();
+</script>
+</body>
+</html>

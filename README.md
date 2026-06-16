@@ -1,6 +1,6 @@
-# Lexicon — Word Game Engine
+# Lexicon — Word & Number Game Engine
 
-A single-file browser word game with Wordle, Quordle, Hexordle, and a dictionary explorer — no install, no server, no dependencies.
+A single-file browser word and number game with Wordle, Quordle, Hexordle, Numble, and a dictionary explorer — no install, no server, no dependencies.
 
 ---
 
@@ -12,6 +12,7 @@ A single-file browser word game with Wordle, Quordle, Hexordle, and a dictionary
   - [Wordle](#wordle)
   - [Quordle](#quordle)
   - [Hexordle](#hexordle)
+  - [Numble](#numble)
   - [Explorer](#explorer)
 - [Controls & Settings](#controls--settings)
   - [Top Bar](#top-bar)
@@ -21,6 +22,9 @@ A single-file browser word game with Wordle, Quordle, Hexordle, and a dictionary
 - [Timer](#timer)
 - [Reveal Answers](#reveal-answers)
 - [Game Protection](#game-protection)
+- [Dark Mode](#dark-mode)
+- [Sound Effects](#sound-effects)
+- [Numble Statistics](#numble-statistics)
 - [Datamuse API Integration](#datamuse-api-integration)
 - [Word List & Vocabulary](#word-list--vocabulary)
 - [Offline Support](#offline-support)
@@ -36,13 +40,13 @@ A single-file browser word game with Wordle, Quordle, Hexordle, and a dictionary
 
 **Lexicon** is a self-contained HTML file that runs entirely in the browser. It requires no build tools, no frameworks, no backend, and no API keys. Open it by double-clicking the file in Chrome (or any modern browser) and play immediately.
 
-It combines three word-guessing game modes of increasing difficulty — Wordle (1 board), Quordle (4 boards), and Hexordle (6 boards) — with a live dictionary explorer powered by the [Datamuse API](https://www.datamuse.com/api/). All word lists and validation logic work offline via embedded fallback data.
+It combines four game modes — Wordle (1 board), Quordle (4 boards), Hexordle (6 boards), and **Numble** (number guessing) — plus a live dictionary explorer powered by the [Datamuse API](https://www.datamuse.com/api/). All game logic works offline via embedded fallback data.
 
 ---
 
 ## Quick Start
 
-1. Save `word_game_engine.html` anywhere on your computer (rename it if you like).
+1. Save `word_game_engine.html` anywhere on your computer.
 2. Double-click it — Chrome opens it as a local file.
 3. A 5-letter Wordle game starts automatically.
 4. Type a word using your keyboard or the on-screen keyboard, then press **Enter**.
@@ -53,7 +57,7 @@ No internet connection is required to play, though an active connection improves
 
 ## Game Modes
 
-Switch between modes instantly using the buttons in the top bar. If you have a game in progress, a confirmation dialog will appear before switching.
+Switch between modes instantly using the buttons in the top bar. If a game is in progress, a confirmation dialog appears before switching.
 
 ### Wordle
 
@@ -66,25 +70,51 @@ The classic single-board word guessing game.
   - 🟨 **Yellow** — correct letter, wrong position
   - ⬜ **Gray** — letter not in the word
 - Win by guessing the word within the allowed number of attempts.
-- If you run out of attempts, the answer is revealed in the status bar with a link to look it up.
+- If you run out of attempts, the answer is revealed with a dictionary link.
 
 ### Quordle
 
-Four simultaneous Wordle boards. Every guess you submit is applied to all four boards at once.
+Four simultaneous Wordle boards. Every guess applies to all four boards at once.
 
-- Each board has its own unique hidden word — no two boards share the same answer in a single game.
-- The color feedback is independent per board.
-- A board locks and shows a win (✓) or lose (✗) overlay when it resolves.
+- Each board has its own unique hidden word — no two boards share the same answer.
+- Color feedback is independent per board.
+- A board locks with a ✓ (win) or ✗ (lose) overlay when it resolves.
 - You win only when all four boards are solved within the attempt limit.
-- Solved and failed boards are overlaid with the answer; you can click failed-board answers to open them in the dictionary.
 
 ### Hexordle
 
 Six simultaneous boards — the hardest mode.
 
-- Same rules as Quordle, but with six independent hidden words.
+- Same rules as Quordle, but six independent hidden words.
 - All six must be solved with the same shared pool of guesses.
-- Requires careful cross-board letter deduction to succeed.
+
+### Numble
+
+A number-guessing game with full Wordle-style feedback.
+
+**Rules:**
+- The hidden answer is a random number with a configurable number of digits (4, 5, or 6).
+- Digits may or may not repeat depending on the **Repeats** setting.
+- You have a configurable number of attempts (4–8) to guess the number.
+- After each guess, tiles reveal:
+  - 🟩 **Green** — digit is correct and in the correct position
+  - 🟨 **Yellow** — digit exists in the answer but is in the wrong position
+  - ⬜ **Gray** — digit does not appear in the answer at all
+
+**Example:**
+```
+Answer:  5 8 3 7
+Guess:   5 7 3 8
+Result:  ✅ 🟨 ✅ 🟨   (5=green, 7=yellow, 3=green, 8=yellow)
+```
+
+**Numble-specific features:**
+- Virtual number keyboard (0–9) with Enter and ⌫ keys
+- Physical keyboard input (digits, Enter, Backspace)
+- Statistics tracking across sessions (games played, win %, streak, best streak, guess distribution)
+- Unfinished games are saved to localStorage and restored on next visit
+- 📊 Statistics button in the top bar
+- Help modal explains rules based on current digit length and repeat setting
 
 ### Explorer
 
@@ -93,15 +123,14 @@ A free-form dictionary and word search tool, separate from the game modes.
 - Enter any word or pattern in the search box.
 - Choose a search type from the dropdown:
 
-  | Type | Datamuse Parameter | What it finds |
-  |---|---|---|
-  | Pattern / Spelling | `sp=` | Words matching a pattern, e.g. `c??ld` → could, child |
-  | Meaning Related | `ml=` | Words with similar meaning, e.g. `happy` → joyful, glad |
-  | Sounds Like | `sl=` | Words that sound like the input, e.g. `knight` → night |
-  | Rhymes With | `rel_rhy=` | Perfect rhymes, e.g. `cat` → bat, hat, mat |
+  | Type | What it finds |
+  |---|---|
+  | Pattern / Spelling | Words matching a pattern, e.g. `c??ld` → could, child |
+  | Meaning Related | Words with similar meaning, e.g. `happy` → joyful, glad |
+  | Sounds Like | Words that sound like the input, e.g. `knight` → night |
+  | Rhymes With | Perfect rhymes, e.g. `cat` → bat, hat, mat |
 
-- Results appear as clickable chips. Clicking any chip opens the word in Merriam-Webster in a new tab.
-- The explorer does not affect game state and has no attempt limit.
+- Results appear as clickable chips. Clicking any chip opens it in Merriam-Webster.
 
 ---
 
@@ -109,263 +138,280 @@ A free-form dictionary and word search tool, separate from the game modes.
 
 ### Top Bar
 
-All game controls are in the persistent top bar.
-
 | Control | Options | Description |
 |---|---|---|
-| **Wordle / Quordle / Hexordle / Explorer** | — | Switches the active mode. Prompts for confirmation if a game is in progress. |
-| **Length** | 4 · 5 · 6 · 7 · 8 | Sets the number of letters in the hidden word(s). Prompts for confirmation if a game is in progress. |
-| **Tries** | 4 – 10 | Sets the maximum number of guesses allowed. Prompts for confirmation if a game is in progress. |
-| **Difficulty** | Easy · Normal · Hard | Controls the vocabulary pool (see [Difficulty System](#difficulty-system)). Prompts for confirmation if a game is in progress. |
-| **Timer** | Off · 2 min · 3 min · 5 min · 10 min · Custom… | Sets an optional countdown timer for the game (see [Timer](#timer)). Prompts for confirmation if a game is in progress. |
-| **New Game** | — | Starts a fresh game in the current mode with the current settings. Prompts for confirmation if a game is in progress. |
+| **Wordle / Quordle / Hexordle / Numble / Explorer** | — | Switches the active mode. Prompts for confirmation if a game is in progress. |
+| **Length** *(word modes)* | 4–8 | Number of letters in the hidden word. Prompts if a game is in progress. |
+| **Tries** *(word modes)* | 4–10 | Maximum word guesses allowed. Prompts if a game is in progress. |
+| **Difficulty** *(word modes)* | Easy · Normal · Hard | Vocabulary pool tier. Prompts if a game is in progress. |
+| **Digits** *(Numble)* | 4 · 5 · 6 | Number of digits in the hidden number. |
+| **Tries** *(Numble)* | 4–8 | Maximum number guesses allowed. |
+| **Repeats** *(Numble)* | Allowed · No Repeats | Whether digits may repeat in the hidden number. |
+| **Timer** | Off · 2 min · 3 min · 5 min · 10 min · Custom… | Optional countdown timer. Shared across all modes. |
+| **?** | — | Opens the Help modal with rules for the current mode. |
+| **📊** *(Numble only)* | — | Opens the Numble Statistics panel. |
+| **🌙 / ☀️** | — | Toggles between dark and light mode. |
+| **New Game** | — | Starts a fresh game. Prompts for confirmation if a game is in progress. |
 
 ### Keyboard Input
 
-Both physical keyboard and on-screen keyboard are fully supported.
+**Word modes:**
 
 | Input | Action |
 |---|---|
-| Any letter key (A–Z) | Types that letter into the current guess |
-| `Enter` | Submits the current guess |
-| `Backspace` | Deletes the last typed letter |
-| On-screen letter key | Same as physical key |
-| On-screen `Enter` | Submits the guess |
-| On-screen `⌫` | Deletes the last letter |
+| A–Z | Types that letter |
+| Enter | Submits the current guess |
+| Backspace | Deletes the last letter |
 
-The on-screen keyboard updates its key colors as you play, reflecting the best-known state for each letter across all submitted guesses (green takes priority over yellow, yellow over gray).
+**Numble mode:**
 
-Physical keyboard input is disabled while any modal dialog is open, and while tile flip animations are playing (to prevent accidentally typing into the wrong row).
+| Input | Action |
+|---|---|
+| 0–9 | Types that digit |
+| Enter | Submits the current guess |
+| Backspace | Deletes the last digit |
+
+All physical keyboard input is disabled while any modal dialog is open and while tile flip animations are playing.
 
 ---
 
 ## Difficulty System
 
-When connected to the internet, Lexicon fetches a pool of words from Datamuse and sorts them by **corpus frequency** — how often the word appears in real English text. The difficulty setting then slices that sorted pool:
+When connected to the internet, Lexicon fetches a pool of words from Datamuse and sorts them by corpus frequency. The difficulty setting slices that pool:
 
 | Difficulty | Pool slice | Typical vocabulary |
 |---|---|---|
-| **Easy** | Top 40% most frequent | Common everyday words: *house, words, plant* |
-| **Normal** | Middle 80% (10th–90th percentile) | General vocabulary: *fable, crisp, anvil* |
-| **Hard** | Bottom 40% least frequent | Rare, advanced, or archaic words: *culpa, brume, garnet* |
+| **Easy** | Top 40% most frequent | Common everyday words |
+| **Normal** | Middle 80% (10th–90th percentile) | General vocabulary |
+| **Hard** | Bottom 40% least frequent | Rare or advanced words |
 
-When offline, difficulty maps directly to hand-curated fallback word lists with the same three tiers, covering word lengths 4 through 8.
+When offline, difficulty maps to hand-curated fallback lists covering lengths 4–8.
+
+Difficulty does not apply to Numble — numbers are always randomly generated.
 
 ---
 
 ## Word Validation
 
-Every guess is validated before it is accepted. Lexicon uses a two-stage approach:
+Every word guess is validated before it is accepted. Lexicon uses a two-stage approach:
 
-**Stage 1 — Local cache check (instant)**
-If the word appears in any of the embedded fallback word lists (which contain thousands of real English words across all lengths and difficulty tiers), it is accepted immediately without an API call.
+**Stage 1 — Local cache (instant)**
+If the word appears in any embedded fallback list, it is accepted immediately. Words validated this session are cached in memory.
 
-Previously validated words are also cached in memory for the session, so repeated guesses of the same word skip the network entirely.
+**Stage 2 — Datamuse API**
+If not found locally, Lexicon queries `?sp={word}&md=df&max=20` and checks:
+- Has `defs` entries → accepted (base dictionary word)
+- No `defs` but `score ≥ 1000` → accepted (inflected form: plurals, past tenses, comparatives, etc.)
+- No exact match or score too low → rejected with shake animation and "Not a valid word!" toast
 
-**Stage 2 — Datamuse API check (online only)**
-If the word is not in the local lists, Lexicon queries:
-```
-https://api.datamuse.com/words?sp={word}&md=df&max=20
-```
-The response is checked for an **exact match** on the word, then:
+**Examples:**
+- ✅ `walks`, `walked`, `walking`, `boxes`, `faster`, `tried` — accepted (inflected forms)
+- ❌ `asdfg`, `zzzzz`, `xkqjw` — rejected
 
-- **Has `defs` entries** → accepted (the word has a dictionary definition — it is a base/lemma form).
-- **No `defs` but `score ≥ 1000`** → accepted (inflected form — plural, past tense, present participle, comparative, superlative, etc.). Datamuse scores real inflected forms highly even when it has no standalone definition for them.
-- **Exact match missing, or score < 1000** → rejected with a shake animation and "Not a valid word!" toast.
-
-**What this means in practice:**
-- ✅ `walks`, `walked`, `walking` — accepted (inflections of *walk*)
-- ✅ `boxes`, `boxed` — accepted (inflections of *box*)
-- ✅ `faster`, `fastest` — accepted (comparatives of *fast*)
-- ✅ `tried`, `tries` — accepted (inflections of *try*)
-- ❌ `asdfg`, `zzzzz`, `xkqjw` — rejected (no match or score too low)
-
-**Offline behavior:** If Datamuse is unreachable, validation falls back to permissive mode (all alphabetic guesses accepted) so the game remains playable without internet.
+Numble does not require validation — any complete digit sequence is accepted.
 
 ---
 
 ## Timer
 
-An optional countdown timer can be enabled from the **Timer** dropdown in the top bar.
+An optional countdown timer is available from the **Timer** dropdown, shared across all game modes including Numble.
 
-**Available presets:** Off, 2 min, 3 min, 5 min, 10 min, Custom…
+**Presets:** Off, 2 min, 3 min, 5 min, 10 min, Custom (1–99 minutes)
 
-Selecting **Custom…** opens a dialog where you can enter any duration from 1 to 99 minutes.
+**Behavior:**
+- Timer displays as `⏱ MM:SS` in the status bar
+- Turns **yellow** at ≤30 seconds remaining
+- Turns **red and pulsing** at ≤10 seconds
+- When it reaches zero, the game ends: "Time's up!" is shown and answers are revealed
 
-**How it works:**
+**After time expires, the Reveal Answers button remains visible.** Clicking it shows all answers immediately, so you can still see what you missed even after losing to the clock.
 
-- The timer is displayed in the status bar as `⏱ MM:SS` and counts down from the moment the game starts.
-- At **30 seconds remaining**, the display turns yellow as a warning.
-- At **10 seconds remaining**, the display turns red and pulses.
-- When the timer reaches zero, the game ends automatically: all boards are revealed, "Time's up!" is shown, and no further guesses are accepted.
-
-**Changing the timer during a game** triggers the same confirmation modal as any other setting change — your current game won't be silently reset.
-
-**Timer and game end:** The timer stops automatically when you win, lose, or manually reveal the answers. It resets cleanly when a new game starts.
+Changing the timer during an active game triggers the same confirmation modal as any other setting change.
 
 ---
 
 ## Reveal Answers
 
-A **Reveal Answers** button appears in the status bar at the start of every game (in all three game modes). It is hidden once the game ends.
+A **Reveal Answers** button appears in the status bar at the start of every game and stays visible even after the timer expires, so you can always choose to see the answers.
 
-Clicking it opens a confirmation dialog:
+- **During an active game:** clicking opens a confirmation dialog. Confirm to immediately end the game and reveal all answers.
+- **After the timer expires:** the button remains active with no confirmation needed — click once to reveal.
+- **After the game ends normally (win or lose):** the button is hidden.
 
-> 🔍 **Reveal answers?**
-> This will immediately end the game and show you all the answers. Are you sure?
-
-- **Cancel** — closes the dialog, continues the game.
-- **Yes, Reveal** — immediately ends the game, stops the timer, and reveals all answer words:
-  - In Wordle: shows a dictionary link for the solution above the keyboard.
-  - In Quordle / Hexordle: shows a lose overlay on every unsolved board with its answer word, which is clickable to look it up in the dictionary.
-
-This feature is useful for checking a word you were stuck on, studying vocabulary, or ending a session early without having to guess wrong until attempts run out.
+Works across all four game modes.
 
 ---
 
 ## Game Protection
 
-Every action that would reset or discard an in-progress game is guarded by a confirmation modal. The modal fires only after at least one guess has been successfully submitted — a fresh, untouched board never prompts.
-
-**Actions that trigger the confirmation:**
+Every action that would reset an in-progress game is guarded by a confirmation modal. The modal only fires after at least one guess has been submitted.
 
 | Action | Modal message |
 |---|---|
-| Clicking a different mode button | "You have a game in progress. Switching will end it and reveal the answer(s). Continue?" |
-| Clicking **New Game** | "You have a game in progress. Starting a new game will end it and reveal the answer(s). Continue?" |
-| Changing Length, Tries, Difficulty, or Timer | "Changing settings will reset your current game and reveal the answer(s). Continue?" |
-| Clicking **Reveal Answers** | "This will immediately end the game and show you all the answers. Are you sure?" |
+| Switching to a different mode | "You have a game in progress. This will end it and reveal the answer(s). Continue?" |
+| Clicking New Game | "You have a game in progress. Starting a new game will end it. Continue?" |
+| Changing Length, Tries, Difficulty, Digits, Repeats, or Timer | "Changing settings will reset your current game. Continue?" |
+| Clicking Reveal Answers (active game) | "This will immediately end the game and show all answers. Are you sure?" |
 
 **Modal options:**
+- **Cancel** — dismisses, returns to game unchanged
+- **Give Up & Leave / Yes, Reveal** — executes the action
 
-- **Keep Playing** — dismisses the modal, restores any dropdown to its previous value, and returns to the game unchanged.
-- **Give Up & Leave** / **Yes, Reveal** — executes the action.
+---
 
-The modal system is generic: a single `openModal(title, text, confirmLabel, callback)` function powers all four confirmation scenarios.
+## Dark Mode
+
+Click the **🌙** button in the top bar to toggle between dark (default) and light mode. The **☀️** icon appears in light mode. The entire UI switches via CSS custom properties — all colors, backgrounds, tile states, and modal surfaces adapt instantly.
+
+---
+
+## Sound Effects
+
+Subtle sound effects are generated entirely with the Web Audio API — no external audio files required.
+
+| Event | Sound |
+|---|---|
+| Typing a letter or digit | Short high beep |
+| Deleting | Short low beep |
+| Invalid input / invalid word | Buzzy descending tone |
+| Tile reveal | Rising arpeggio (one tone per tile, staggered) |
+| Win | Four-note ascending fanfare |
+| Lose / time expires | Three-note descending fall |
+
+Sounds play on all game modes. No on/off toggle is provided — browser tab muting works if needed.
+
+---
+
+## Numble Statistics
+
+Statistics are tracked automatically across sessions using localStorage.
+
+| Stat | Description |
+|---|---|
+| **Played** | Total Numble games played |
+| **Win %** | Percentage of games won |
+| **Streak** | Current consecutive win streak |
+| **Best** | Best win streak ever |
+| **Guess Distribution** | Bar chart of how many guesses each win took |
+
+The current game's row is highlighted in the distribution chart when viewing stats after a game.
+
+**Access:** Click the **📊** button in the top bar while in Numble mode.
+
+**Reset:** A Reset Stats button inside the stats panel clears all data after confirmation.
+
+**Unfinished game save:** If you close the tab mid-game, the board state (solution, row history, settings) is saved to localStorage and restored the next time you open the file in Numble mode with the same settings.
 
 ---
 
 ## Datamuse API Integration
 
-Lexicon uses the [Datamuse API](https://www.datamuse.com/api/) for three distinct purposes, all via plain `fetch()` calls with no API key required.
+Lexicon uses the [Datamuse API](https://www.datamuse.com/api/) for three purposes, all via plain `fetch()` with no API key required.
 
 | Purpose | Endpoint | Used for |
 |---|---|---|
-| Word pool generation | `GET /words?sp=?????&max=500&md=f` | Building the pool of potential hidden words at game start |
-| Guess validation | `GET /words?sp={word}&md=df&max=20` | Checking whether a submitted guess is a real English word |
-| Explorer search | `GET /words?sp=` / `?ml=` / `?sl=` / `?rel_rhy=` | Powering the four search modes in Explorer |
+| Word pool generation | `GET /words?sp=?????&max=500&md=f` | Building the pool of potential hidden words |
+| Guess validation | `GET /words?sp={word}&md=df&max=20` | Checking whether a guess is a real English word |
+| Explorer search | `GET /words?sp=` / `?ml=` / `?sl=` / `?rel_rhy=` | Powering the four Explorer search types |
 
-All API calls are wrapped in try/catch with graceful fallbacks. The game never blocks or crashes if Datamuse is slow or unavailable.
+All calls are wrapped in try/catch. The game never blocks or crashes if Datamuse is unavailable.
 
 ---
 
 ## Word List & Vocabulary
 
-**Online (Datamuse):** When connected to the internet, Lexicon fetches up to **500 words per query** from Datamuse, frequency-ranked from the full English corpus. This is the primary and far richer source — the pool changes slightly each game as Datamuse returns varied results.
+**Online:** Datamuse returns up to 500 frequency-ranked words per query — the primary and richer source.
 
-**Offline (embedded fallback):** The file contains hand-curated fallback lists for lengths 4–8 across all three difficulty tiers. These are a limited sample — roughly 100–300 words per length/difficulty combination — and exist purely as a safety net when Datamuse is unreachable.
+**Offline:** Embedded fallback lists cover lengths 4–8 across easy, normal, and hard tiers (~100–300 words per combination). These are a safety net only and are not exhaustive.
 
-**Summary:** Online play gives you a vastly wider and more varied vocabulary. The embedded lists are not exhaustive and are not intended to be — Datamuse is the real dictionary engine.
+As long as you have internet, you get a much wider vocabulary. The local lists exist purely for offline play.
 
 ---
 
 ## Offline Support
 
-Lexicon is fully playable without an internet connection. Every critical feature has an offline fallback:
-
 | Feature | Online | Offline |
 |---|---|---|
-| Word pool | Fetched from Datamuse (up to 500 words, frequency-ranked) | Embedded lists: ~100–300 words per length/difficulty combination |
+| Word pool | Datamuse (up to 500 words) | Embedded lists |
 | Word validation | Datamuse API + local cache | Permissive (all alphabetic guesses accepted) |
-| Explorer search | Live Datamuse results | Shows "Search failed" error message |
-| Dictionary links | Opens Merriam-Webster in new tab | Link still present; browser shows no-connection error |
-
-The embedded fallback lists cover word lengths 4, 5, 6, 7, and 8, each split into easy, normal, and hard tiers, totalling several thousand unique words baked directly into the HTML file.
+| Explorer search | Live Datamuse results | "Search failed" error message |
+| Dictionary links | Opens Merriam-Webster | Link present; browser shows no-connection error |
+| Numble | Fully offline | Fully offline |
+| Stats / save | localStorage (fully offline) | localStorage (fully offline) |
 
 ---
 
 ## Dictionary Links
 
-Any time a game ends — win or lose — a **"Look up in dictionary"** link appears above the keyboard for the solution word. Clicking it opens:
+When a word game ends, a **"Look up in dictionary"** link appears above the keyboard. In Quordle/Hexordle, failed boards show the answer word as a clickable underlined link. In Explorer, every result chip is clickable. All links open:
 
 ```
 https://www.merriam-webster.com/dictionary/{word}
 ```
 
-In Quordle and Hexordle, boards that were **not solved** show the answer word in the board overlay as an underlined link. Clicking it opens the same Merriam-Webster URL for that word.
-
-In Explorer mode, every result chip opens its word in Merriam-Webster when clicked.
+Dictionary links do not apply to Numble.
 
 ---
 
 ## UI & Animations
 
-**Tile flip animation**
-When a guess is submitted, each tile flips in sequence (280ms stagger). The color state is applied at the midpoint of the flip (when the tile is edge-on and invisible), so the color and letter both appear cleanly on the way back up — avoiding the visual glitch where letters appeared to vanish mid-animation.
+**Tile flip:** Each tile flips on a 280ms stagger. Color is applied at the midpoint of the flip (when the tile is edge-on and invisible) so the color and letter appear cleanly on the return — no visual glitch where letters disappear.
 
-**Pop animation**
-Each tile briefly scales up (1.12×) when a letter is typed, providing tactile feedback.
+**Pop:** Tiles briefly scale up (1.12×) on letter/digit input.
 
-**Shake animation**
-The current row shakes horizontally if a guess is submitted with too few letters, or if the word fails validation.
+**Shake:** The current row shakes on invalid input or too-few characters.
 
-**Input locking**
-All keyboard and on-screen input is locked while tile flip animations are running. This prevents letters from being accidentally typed into the next row before the previous guess finishes revealing.
+**Input locking:** All input is locked while animations play, preventing accidental input into the next row.
 
-**Board overlays (Quordle / Hexordle)**
-Boards that have resolved show a semi-transparent overlay with ✓ (green, win) or ✗ (red, lose) and the answer word. The overlay appears after the last tile of that board finishes flipping.
+**Board overlays:** In Quordle/Hexordle, resolved boards show a semi-transparent win/lose overlay with the answer.
 
-**On-screen keyboard coloring**
-Key colors follow a strict priority: green (correct) > yellow (present) > gray (absent). Once a key turns green it never downgrades.
+**Timer states:** Normal → yellow (≤30s) → red pulsing (≤10s).
 
-**Timer display**
-The `⏱ MM:SS` countdown in the status bar transitions through three states — normal (dim text), warning (yellow, ≤30s), danger (red + pulsing, ≤10s) — to give clear visual urgency without being intrusive during normal play.
-
-**Dark theme**
-The entire UI uses a consistent dark color palette defined with CSS custom properties in the `:root` block. Retheme the entire app by editing those variables.
+**Dark/light mode:** Full UI retheme via CSS custom properties — instant, no flash.
 
 ---
 
 ## Code Architecture
 
-The entire application is structured in one HTML file with no external dependencies. The JavaScript is organized into clearly labeled sections:
-
 ```
-FALLBACK WORD LISTS       — embedded word pools for offline play, all lengths & difficulties
-STATE                     — all mutable game variables in one place
-UTILITY                   — rand(), uniqueWords(), showToast(), setStatus(), updateStatusBar()
-WORD VALIDATION           — isRealWord() with local cache + Datamuse two-stage check
-WORD FETCHING             — fetchWords(), applyDifficultyFilter(), applyDifficultyFallback()
-MODE SWITCHING            — requestSwitchMode(), requestNewGame(), openModal(), closeModal(),
-                            openLeaveModal(), modalConfirmAction(), switchMode()
-SETTINGS CHANGE           — onSettingChange() with mid-game guard
-INIT GAME                 — initGame() — async entry point, wires timer + reveal button
-BOARD GENERATION          — generateBoard() (Wordle), generateMultiBoard() (Quordle/Hexordle)
-KEYBOARD                  — buildKeyboard(), makeKey(), updateKeyboard()
-INPUT HANDLING            — typeLetter(), deleteLetter(), submitGuess() (async)
-GUESS PROCESSING          — processWordleGuess(), processMultiBoardGuess(), checkMultiBoardEnd(),
-                            showBoardOverlay()
-CHECK GUESS               — checkGuess() — two-pass correct/present/absent scoring
-REVEAL ROW                — revealRow() — staggered flip with midpoint color injection
-SHAKE ROW                 — shakeCurrentRow()
-DICT LINK                 — addRevealLink(), openDict()
-KEYBOARD EVENTS           — physical keyboard listener
-TIMER                     — startTimer(), stopTimer(), renderTimer()
-CUSTOM TIMER MODAL        — showCustomTimerModal(), cancelCustomTimer(), applyCustomTimer()
-REVEAL ANSWERS            — updateRevealButton(), requestRevealAnswers(), revealAllAnswers()
-EXPLORER MODE             — explorerSearch()
-BOOT                      — initGame() call on page load
+NUMBLE STATS (localStorage)   — loadNumbleStats, saveNumbleStats, loadNumbleSave, saveNumbleGame
+SHARED STATE                  — all mutable variables for both word and Numble modes
+SOUND ENGINE                  — Web Audio API tones: sfxType, sfxDelete, sfxInvalid, sfxReveal, sfxWin, sfxLose
+DARK MODE                     — toggleDarkMode()
+UTILITY                       — rand, uniqueWords, showToast, showValidating, setStatus, updateStatusBar
+WORD VALIDATION               — isRealWord() — local cache + Datamuse two-stage check
+WORD FETCHING                 — fetchWords, applyDifficultyFilter, applyDifficultyFallback
+MODALS                        — openModal, closeModal, modalConfirmAction, openLeaveModal, isInProgress
+HELP MODAL                    — showHelp() — content adapts to current mode
+MODE SWITCHING                — requestSwitchMode, requestNewGame, switchMode
+SETTINGS CHANGE               — onSettingChange (word), onNumbleSettingChange (Numble)
+INIT WORD GAME                — initGame() — async, fetches words, resets state, starts timer
+BOARD GENERATION              — generateBoard (Wordle), generateMultiBoard (Quordle/Hexordle)
+WORD KEYBOARD                 — buildKeyboard, makeKey, updateKeyboard
+WORD INPUT                    — typeLetter, deleteLetter, submitGuess (async)
+GUESS PROCESSING              — checkGuess (shared), revealRow (shared), shakeRow (shared)
+                                processWordleGuess, processMultiBoardGuess, checkMultiBoardEnd
+                                showBoardOverlay, addRevealLink, openDict
+KEYBOARD EVENTS               — shared keydown listener routing to word or Numble handlers
+EXPLORER                      — explorerSearch()
+TIMER                         — startTimer, stopTimer, renderTimer, showCustomTimerModal,
+                                cancelCustomTimer, applyCustomTimer
+REVEAL ANSWERS                — updateRevealButton, requestRevealAnswers, revealAllAnswers
+NUMBLE                        — generateNumber, initNumble, buildNumbleBoard, buildNumKeyboard,
+                                makeNumKey, nType, nDelete, nSubmit, nRevealAnswer, checkGuess (shared)
+NUMBLE STATS UI               — showNumbleStats, hideNumbleStats, resetNumbleStats
+BOOT                          — initGame()
 ```
 
 **Key design decisions:**
 
-- `inputLocked` is a boolean gate set to `true` on guess submission and released only inside the reveal callback, ensuring animations always complete before new input is accepted.
-- `gameStarted` is only set to `true` after the first successful (validated) guess, so the leave-game modal does not fire on a pristine board.
-- The modal system is fully generic: `openModal(title, text, confirmLabel, fn)` stores the callback in `modalConfirmFn`; `modalConfirmAction()` captures and clears it before calling, preventing any race where a stale reference could trigger the wrong action.
-- `validWordCache` (a `Set`) persists for the session, preventing redundant Datamuse calls for words already validated this session.
-- Multi-board `revealRow` callbacks use a shared `pendingCallbacks` counter to detect when all active boards have finished animating before incrementing `currentRow` and evaluating end conditions.
-- `timerSeconds` holds the configured duration; `timerLeft` holds the live countdown. `stopTimer()` always clears the interval safely and can be called multiple times without side effects.
-- Settings changes snapshot new values into local variables before opening the modal, so if the user cancels, the dropdowns can be read back without needing to track "previous values" separately.
+- `checkGuess(guess, solution, length)` and `revealRow()` are shared between word and Numble modes — identical two-pass correct/present/absent logic.
+- `isInProgress()` checks the correct game state depending on `MODE`, keeping the modal guard universal.
+- `updateRevealButton()` keeps the Reveal Answers button visible even after the timer expires, so players can always access answers.
+- `timerSeconds` is shared between modes; `startTimer` / `stopTimer` work identically for both.
+- Numble saves use a versioned key structure `{solution, len, tries, repeats, row, over, history[]}` — mismatched settings on restore trigger a fresh game.
+- `modalConfirmFn` is captured into a local variable before clearing in `modalConfirmAction()` to prevent any race where the callback could be lost.
+- Sound effects are generated on-demand with Web Audio — no audio files, no preloading, no CORS issues.
 
 ---
 
@@ -374,33 +420,34 @@ BOOT                      — initGame() call on page load
 | Property | Value |
 |---|---|
 | File type | Single `.html` file |
-| File size | ~70 KB (uncompressed) |
+| File size | ~95 KB (uncompressed) |
 | Dependencies | None |
 | Frameworks | None |
-| API | Datamuse (no key required) |
+| External API | Datamuse (no key required) |
 | Browser support | Chrome, Firefox, Safari, Edge (any modern browser) |
-| Minimum word length | 4 letters |
-| Maximum word length | 8 letters |
-| Minimum attempts | 4 |
-| Maximum attempts | 10 |
+| Word length range | 4–8 letters |
+| Word attempt range | 4–10 |
+| Numble digit range | 4–6 digits |
+| Numble attempt range | 4–8 |
 | Boards in Quordle | 4 |
 | Boards in Hexordle | 6 |
 | Tile flip duration | 500ms |
-| Tile stagger delay | 280ms per tile |
-| Validation score threshold | 1000 (Datamuse score units) |
+| Tile stagger delay | 280ms |
+| Validation score threshold | 1000 (Datamuse score) |
 | Timer presets | Off, 2 min, 3 min, 5 min, 10 min, Custom (1–99 min) |
 | Timer warning threshold | 30 seconds remaining |
 | Timer danger threshold | 10 seconds remaining |
+| Stats storage | localStorage (`lexicon_numble_stats`, `lexicon_numble_save`) |
 
 ---
 
 ## Known Limitations
 
-- **No persistent score tracking.** Win/loss history is not saved between sessions. Closing and reopening the file starts fresh.
-- **No share/copy results feature.** The colored emoji grid common in Wordle clones is not implemented.
-- **Single language.** Only English words are supported via Datamuse.
-- **Offline validation is permissive.** Without internet, any alphabetic string of the correct length is accepted as a guess. This is intentional to keep the game playable without a connection.
-- **Datamuse rate limits.** The Datamuse API is free and requires no authentication, but it may occasionally be slow or return empty results under high load. Fallback lists ensure the game always starts.
-- **No hard mode enforcement.** Hard mode only affects the vocabulary pool; there is no rule requiring you to reuse revealed letters in subsequent guesses (unlike Wordle's official hard mode option).
-- **Local file access.** When opened as a `file://` URL, some browsers may block `fetch()` calls to external APIs due to CORS/mixed-content restrictions. Chrome handles this correctly for `file://` origins. If validation or word fetching fails unexpectedly, try serving the file via a simple local HTTP server: `python3 -m http.server`.
-- **Timer does not pause.** There is currently no pause button. Switching to Explorer mode while a timer is running will continue counting down.
+- **No word-mode score tracking.** Win/loss history for Wordle, Quordle, and Hexordle is not saved. Only Numble tracks statistics.
+- **No share/copy results.** The colored emoji grid common in Wordle clones is not implemented.
+- **Single language.** Only English words via Datamuse.
+- **Offline validation is permissive.** Without internet, any alphabetic string of the correct length is accepted.
+- **No hard-mode word enforcement.** Hard difficulty only affects vocabulary; reusing revealed letters is not enforced.
+- **Timer does not pause.** There is no pause button; switching to Explorer while a timer runs continues counting.
+- **Local file access.** When opened as a `file://` URL, most browsers work correctly for `fetch()`. If Datamuse calls fail unexpectedly, try: `python3 -m http.server` and open via `http://localhost:8000`.
+- **Sound requires user interaction.** Web Audio API requires at least one user gesture before audio plays. The first keypress or button click in each session unlocks audio automatically.
