@@ -490,6 +490,45 @@ function uniqueWords(pool,count){
   while(picked.length<count&&a<1000){const w=rand(pool);if(!used.has(w)){used.add(w);picked.push(w);}a++;}
   return picked;
 }
+// ── Weighted selection (used by the difficulty system) ──
+// pool = { words: string[], weights: number[] } — parallel arrays.
+// Picks a single word with probability proportional to its weight.
+function weightedRand(pool) {
+  if (!pool || !pool.words || !pool.words.length) return null;
+  const total = pool.weights.reduce((a,b)=>a+b, 0);
+  let r = Math.random() * total;
+  for (let i=0; i<pool.words.length; i++) {
+    r -= pool.weights[i];
+    if (r <= 0) return pool.words[i];
+  }
+  return pool.words[pool.words.length-1];
+}
+// Picks `count` distinct words from a weighted pool, respecting weights.
+function weightedUniqueWords(pool, count) {
+  if (!pool || !pool.words || !pool.words.length) return [];
+  const words = [...pool.words], weights = [...pool.weights];
+  const picked = [];
+  let attempts = 0;
+  while (picked.length < count && words.length > 0 && attempts < 2000) {
+    const total = weights.reduce((a,b)=>a+b, 0);
+    let r = Math.random() * total;
+    let idx = -1;
+    for (let i=0; i<words.length; i++) {
+      r -= weights[i];
+      if (r <= 0) { idx = i; break; }
+    }
+    if (idx === -1) idx = words.length - 1;
+    picked.push(words[idx]);
+    words.splice(idx, 1);
+    weights.splice(idx, 1);
+    attempts++;
+  }
+  // If the pool was smaller than count (rare for short word lengths), pad with repeats
+  while (picked.length < count && pool.words.length > 0) {
+    picked.push(weightedRand(pool));
+  }
+  return picked;
+}
 function showToast(msg,dur=1800){
   const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),dur);
@@ -545,23 +584,54 @@ async function fetchWords(len,difficulty){
       const wf=scored.filter(w=>/^[a-z]+$/.test(w.word)&&w.word.length===len)
         .map(w=>({word:w.word.toLowerCase(),f:parseFloat(w.tags.find(t=>t.startsWith('f:')).slice(2))}))
         .sort((a,b)=>b.f-a.f);
-      const words=applyDifficultyFilter(wf,difficulty);
-      if(words.length>=20)return words;
+      const pool=applyDifficultyFilter(wf,difficulty);
+      if(pool.words.length>=20)return pool;
     }
+    // Fallback: no frequency data available — treat all results as one flat tier
     const words=data.map(w=>w.word.toLowerCase()).filter(w=>/^[a-z]+$/.test(w)&&w.length===len);
-    if(words.length>=20)return words;
+    if(words.length>=20)return { words, weights: words.map(()=>1) };
   }catch{}
   return applyDifficultyFallback(len,difficulty);
 }
+// ── Weighted difficulty tiers ──
+// Each tier is CUMULATIVE: normal includes easy+normal, hard includes easy+normal+hard.
+// Words from the target tier get a higher selection weight than carried-over easier words.
+const TIER_WEIGHTS = {
+  easy:   { easy: 3 },
+  normal: { easy: 1.5, normal: 3 },
+  hard:   { easy: 1, normal: 1.5, hard: 3 }
+};
+
 function applyDifficultyFilter(sorted,diff){
+  // sorted = frequency-ranked Datamuse words (most frequent first).
+  // Slice into three frequency-based tiers mirroring our easy/normal/hard buckets.
   const n=sorted.length;
-  let s;
-  if(diff==='easy')s=sorted.slice(0,Math.floor(n*0.4));
-  else if(diff==='hard')s=sorted.slice(Math.floor(n*0.6));
-  else s=sorted.slice(Math.floor(n*0.1),Math.floor(n*0.9));
-  return s.map(w=>w.word);
+  const easyTier   = sorted.slice(0, Math.floor(n*0.4)).map(w=>w.word);
+  const normalTier = sorted.slice(Math.floor(n*0.1), Math.floor(n*0.9)).map(w=>w.word);
+  const hardTier    = sorted.slice(Math.floor(n*0.6)).map(w=>w.word);
+  return buildWeightedPool({easy:easyTier, normal:normalTier, hard:hardTier}, diff);
 }
-function applyDifficultyFallback(len,diff){const b=FALLBACK[len]||FALLBACK[5];return b[diff]||b['normal']||[];}
+
+function applyDifficultyFallback(len,diff){
+  const b = FALLBACK[len] || FALLBACK[5];
+  return buildWeightedPool(b, diff);
+}
+
+// Builds a weighted pool: { words: string[], weights: number[] } where lower-tier
+// words are included for normal/hard but with reduced selection weight.
+function buildWeightedPool(tiers, diff) {
+  const weights = TIER_WEIGHTS[diff] || TIER_WEIGHTS.normal;
+  const words = [];
+  const weightArr = [];
+  for (const [tier, w] of Object.entries(weights)) {
+    const list = tiers[tier] || [];
+    for (const word of list) {
+      words.push(word);
+      weightArr.push(w);
+    }
+  }
+  return { words, weights: weightArr };
+}
 
 // ═══════════════════════════════════════════════════
 //  MODALS
@@ -702,12 +772,12 @@ async function initGame(){
   BOARD_COUNT=MODE==='hexordle'?6:4;
   setStatus('Loading...');
   wordPool=await fetchWords(WORD_LEN,DIFFICULTY);
-  if(!wordPool.length)wordPool=applyDifficultyFallback(WORD_LEN,DIFFICULTY);
+  if(!wordPool||!wordPool.words||!wordPool.words.length)wordPool=applyDifficultyFallback(WORD_LEN,DIFFICULTY);
   currentRow=0;currentCol=0;currentGuess=[];gameOver=false;inputLocked=false;gameStarted=false;
   qDone=Array(BOARD_COUNT).fill(false);
   stopTimer();
-  qSolutions=uniqueWords(wordPool,BOARD_COUNT);
-  solution=rand(wordPool);
+  qSolutions=weightedUniqueWords(wordPool,BOARD_COUNT);
+  solution=weightedRand(wordPool);
   const old=document.getElementById('reveal-link');if(old)old.remove();
   if(MODE==='wordle')generateBoard();else generateMultiBoard();
   buildKeyboard();updateStatusBar();setStatus('');updateRevealButton();

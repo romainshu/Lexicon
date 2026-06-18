@@ -177,17 +177,31 @@ All physical keyboard input is disabled while any modal dialog is open and while
 
 ## Difficulty System
 
-When connected to the internet, Lexicon fetches a pool of words from Datamuse and sorts them by corpus frequency. The difficulty setting slices that pool:
+Difficulty tiers are **cumulative and weighted**, not exclusive. Choosing a harder difficulty doesn't replace easier words — it adds the harder tier on top while making it more likely to be picked.
 
-| Difficulty | Pool slice | Typical vocabulary |
+**How the tiers stack:**
+
+| Difficulty | Word pool includes | What gets selected most often |
 |---|---|---|
-| **Easy** | Top 40% most frequent | Common everyday words |
-| **Normal** | Middle 80% (10th–90th percentile) | General vocabulary |
-| **Hard** | Bottom 40% least frequent | Rare or advanced words |
+| **Easy** | Easy words only | Easy words |
+| **Normal** | Easy + Normal words | Mostly Normal, occasionally Easy |
+| **Hard** | Easy + Normal + Hard words | Mostly Hard, sometimes Normal, rarely Easy |
 
-When offline, difficulty maps to hand-curated fallback lists covering lengths 4–8.
+**Selection weights** — each word in the pool carries a weight based on how it relates to your chosen difficulty:
 
-Difficulty does not apply to Numble — numbers are always randomly generated.
+| Difficulty selected | Easy-tier weight | Normal-tier weight | Hard-tier weight |
+|---|---|---|---|
+| Easy | 3× | — | — |
+| Normal | 1.5× | 3× | — |
+| Hard | 1× | 1.5× | 3× |
+
+In practice, on **Hard**, a hard-tier word is roughly **3× more likely** to be chosen than an easy-tier word and **2× more likely** than a normal-tier word — but easy and normal words can still occasionally appear, keeping the game from being impossibly obscure every single round.
+
+**Where the tiers come from:**
+- **Online:** Datamuse results are sorted by corpus frequency and sliced into three overlapping frequency bands (top 40% = easy, 10th–90th percentile = normal, bottom 40% = hard), then combined per the table above.
+- **Offline:** The same cumulative-weighted logic is applied directly to the embedded fallback word lists for each tier.
+
+Difficulty does not apply to Numble — numbers are always randomly generated regardless of difficulty setting.
 
 ---
 
@@ -378,9 +392,10 @@ NUMBLE STATS (localStorage)   — loadNumbleStats, saveNumbleStats, loadNumbleSa
 SHARED STATE                  — all mutable variables for both word and Numble modes
 SOUND ENGINE                  — Web Audio API tones: sfxType, sfxDelete, sfxInvalid, sfxReveal, sfxWin, sfxLose
 DARK MODE                     — toggleDarkMode()
-UTILITY                       — rand, uniqueWords, showToast, showValidating, setStatus, updateStatusBar
+UTILITY                       — rand, uniqueWords, weightedRand, weightedUniqueWords,
+                                showToast, showValidating, setStatus, updateStatusBar
 WORD VALIDATION               — isRealWord() — local cache + Datamuse two-stage check
-WORD FETCHING                 — fetchWords, applyDifficultyFilter, applyDifficultyFallback
+WORD FETCHING                 — fetchWords, applyDifficultyFilter, applyDifficultyFallback, buildWeightedPool
 MODALS                        — openModal, closeModal, modalConfirmAction, openLeaveModal, isInProgress
 HELP MODAL                    — showHelp() — content adapts to current mode
 MODE SWITCHING                — requestSwitchMode, requestNewGame, switchMode
@@ -412,6 +427,7 @@ BOOT                          — initGame()
 - Numble saves use a versioned key structure `{solution, len, tries, repeats, row, over, history[]}` — mismatched settings on restore trigger a fresh game.
 - `modalConfirmFn` is captured into a local variable before clearing in `modalConfirmAction()` to prevent any race where the callback could be lost.
 - Sound effects are generated on-demand with Web Audio — no audio files, no preloading, no CORS issues.
+- The word pool is represented as `{ words: string[], weights: number[] }` (parallel arrays) rather than a flat list. `weightedRand()` and `weightedUniqueWords()` pick from this structure with probability proportional to weight, so harder difficulties favor — but never exclude — easier words.
 
 ---
 
